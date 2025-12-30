@@ -1,228 +1,535 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useMemo } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Loader2, X } from "lucide-react"
-import { useAppointments } from "@/hooks/use-appointments"
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { useAppointments } from "@/hooks/use-appointments";
+import { useServices } from "@/hooks/use-services";
+import { useStylists } from "@/hooks/use-stylists";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { CalendarIcon, Loader2, Pencil, Plus, X } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
-const SERVICES = [
-  { name: "Haircut", price: 500 },
-  { name: "Hair Color", price: 2000 },
-  { name: "Highlights", price: 3500 },
-  { name: "Blowout", price: 800 },
-  { name: "Hair Treatment", price: 1500 },
-  { name: "Manicure", price: 600 },
-  { name: "Pedicure", price: 800 },
-  { name: "Facial", price: 1200 },
-  { name: "Makeup", price: 2500 },
-]
-
-const PAYMENT_METHODS = ["Cash", "Credit Card", "Debit Card", "UPI", "Other"]
-const STYLISTS = ["Sarah Johnson", "Michael Chen", "Emily Rodriguez", "David Kim", "Jessica Martinez"]
+const PAYMENT_METHODS = ["Cash", "Card", "UPI"];
 
 interface AppointmentFormProps {
-  onSuccess?: () => void
-  onCancel?: () => void
+  onSuccess?: () => void;
+  appointment?: any;
 }
 
-export function AppointmentForm({ onSuccess, onCancel }: AppointmentFormProps) {
-  const { addAppointment } = useAppointments()
-  const [loading, setLoading] = useState(false)
+export function AppointmentForm({
+  onSuccess,
+  appointment,
+}: AppointmentFormProps) {
+  const { addAppointment, updateAppointment } = useAppointments();
+  const { services } = useServices();
+  const { stylists } = useStylists();
+  const [loading, setLoading] = useState(false);
+
+  const sortedServices = [...services].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  const sortedStylists = [...stylists].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 
   const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    service: "",
-    date: new Date().toISOString().split("T")[0],
-    amount: 0,
-    discount: 0,
-    paymentMethod: "Cash",
-    stylist: STYLISTS[0],
-  })
+    name: appointment?.name || "",
+    phone: appointment?.phone || "",
+    services: appointment?.services || [],
+    date: appointment?.date ? new Date(appointment.date) : new Date(),
+    amount: appointment?.amount || 0,
+    discount: appointment?.discount || 0,
+    paymentMethod: appointment?.paymentMethod || "",
+    stylist: appointment?.stylist || "",
+  });
+  const [selectedService, setSelectedService] = useState("");
+  const [editingServiceIndex, setEditingServiceIndex] = useState<number | null>(
+    null,
+  );
+  const [editingPrice, setEditingPrice] = useState("");
 
-  const finalAmount = useMemo(() => {
-    const discountAmount = (formData.amount * formData.discount) / 100
-    return formData.amount - discountAmount
-  }, [formData.amount, formData.discount])
+  const handleAddService = () => {
+    if (!selectedService) {
+      toast.error("Please select a service");
+      return;
+    }
+    const service = sortedServices.find((s) => s.name === selectedService);
+    if (!service) return;
 
-  const handleServiceChange = (serviceName: string) => {
-    const service = SERVICES.find((s) => s.name === serviceName)
+    const newServices = [
+      ...formData.services,
+      { name: service.name, price: service.price },
+    ];
+    const newAmount = newServices.reduce((sum, s) => sum + s.price, 0);
+
     setFormData({
       ...formData,
-      service: serviceName,
-      amount: service?.price || 0,
-    })
-  }
+      services: newServices,
+      amount: newAmount,
+    });
+    setSelectedService("");
+  };
+
+  const handleRemoveService = (index: number) => {
+    const newServices = formData.services.filter(
+      (_: any, i: number) => i !== index,
+    );
+    const newAmount = newServices.reduce(
+      (sum: number, s: any) => sum + s.price,
+      0,
+    );
+
+    setFormData({
+      ...formData,
+      services: newServices,
+      amount: newAmount,
+    });
+  };
+
+  const handleEditService = (index: number) => {
+    setEditingServiceIndex(index);
+    setEditingPrice(formData.services[index].price.toString());
+  };
+
+  const handleSaveEditedPrice = (index: number) => {
+    const newPrice = parseFloat(editingPrice);
+    if (isNaN(newPrice) || newPrice <= 0) {
+      toast.error("Please enter a valid price");
+      return;
+    }
+
+    const newServices = [...formData.services];
+    newServices[index] = { ...newServices[index], price: newPrice };
+    const newAmount = newServices.reduce(
+      (sum: number, s: any) => sum + s.price,
+      0,
+    );
+
+    setFormData({
+      ...formData,
+      services: newServices,
+      amount: newAmount,
+    });
+    setEditingServiceIndex(null);
+    setEditingPrice("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+
+    if (formData.services.length === 0) {
+      toast.error("Please add at least one service");
+      return;
+    }
+
+    if (!formData.stylist) {
+      toast.error("Please select a stylist");
+      return;
+    }
+
+    if (!formData.paymentMethod) {
+      toast.error("Please select a payment method");
+      return;
+    }
+
+    if (formData.phone.length !== 10) {
+      toast.error("Phone number must be 10 digits");
+      return;
+    }
+
+    if (formData.amount <= 0) {
+      toast.error("Amount must be greater than 0");
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      await addAppointment({
-        ...formData,
-        timestamp: new Date().toISOString(),
-      })
-      onSuccess?.()
+      if (appointment?.id) {
+        await updateAppointment(appointment.id, {
+          ...formData,
+          date: format(formData.date, "yyyy-MM-dd"),
+          timestamp: appointment.timestamp,
+        });
+      } else {
+        await addAppointment({
+          ...formData,
+          date: format(formData.date, "yyyy-MM-dd"),
+          timestamp: new Date().toISOString(),
+        });
+      }
+      onSuccess?.();
+      if (!appointment?.id) {
+        setFormData({
+          name: "",
+          phone: "",
+          services: [],
+          date: new Date(),
+          amount: 0,
+          discount: 0,
+          paymentMethod: "",
+          stylist: "",
+        });
+        setSelectedService("");
+      }
     } catch (error) {
-      console.error("[v0] Error adding sale:", error)
+      toast.error(
+        appointment?.id
+          ? "Failed to update sale. Please try again."
+          : "Failed to add sale. Please try again.",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+  const finalAmount =
+    formData.amount - (formData.amount * formData.discount) / 100;
 
   return (
-    <div className="flex flex-col h-full max-h-[90vh]">
-      <div className="flex items-center justify-between px-6 py-4 border-b">
-        <h2 className="text-xl font-bold">Add New Sale</h2>
-        {onCancel && (
-          <Button variant="ghost" size="icon" onClick={onCancel} className="h-8 w-8">
-            <X className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Client Information</CardTitle>
+          <CardDescription className="text-xs">
+            Enter the customer details
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm">
+                Client Name
+              </Label>
+              <Input
+                id="name"
+                placeholder="Enter client name"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                required
+                className="h-10"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-sm">
+                Phone Number
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                  +91
+                </span>
+                <Input
+                  id="phone"
+                  placeholder="98765 43210"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "");
+                    if (value.length <= 10) {
+                      setFormData({ ...formData, phone: value });
+                    }
+                  }}
+                  required
+                  minLength={10}
+                  maxLength={10}
+                  className="h-10 pl-12"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Date</Label>
-            <Input
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="bg-slate-50 border-slate-300 h-11"
-              required
-            />
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Service Details</CardTitle>
+          <CardDescription className="text-xs">
+            Add services and select stylist
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="service" className="text-sm">
+                Add Service
+              </Label>
+              <div className="flex gap-2">
+                <Select
+                  value={selectedService}
+                  onValueChange={setSelectedService}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortedServices.map((s) => (
+                      <SelectItem key={s.name} value={s.name}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  size="icon"
+                  className="h-10 w-10 shrink-0"
+                  onClick={handleAddService}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="stylist" className="text-sm">
+                Stylist
+              </Label>
+              <Select
+                value={formData.stylist}
+                onValueChange={(v) => setFormData({ ...formData, stylist: v })}
+                required
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Select stylist" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortedStylists.map((s) => (
+                    <SelectItem key={s.id} value={s.name}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Payment Method</Label>
-            <Select
-              value={formData.paymentMethod}
-              onValueChange={(v) => setFormData({ ...formData, paymentMethod: v })}
-            >
-              <SelectTrigger className="bg-slate-50 border-slate-300 h-11">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_METHODS.map((m) => (
-                  <SelectItem key={m} value={m}>
-                    {m}
-                  </SelectItem>
+          {formData.services.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm">Selected Services</Label>
+              <div className="space-y-2">
+                {formData.services.map((service: any, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{service.name}</p>
+                        {editingServiceIndex === index ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-muted-foreground">
+                              ₹
+                            </span>
+                            <Input
+                              type="number"
+                              value={editingPrice}
+                              onChange={(e) => setEditingPrice(e.target.value)}
+                              className="h-7 w-24 text-xs"
+                              autoFocus
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="default"
+                              className="h-7 text-xs"
+                              onClick={() => handleSaveEditedPrice(index)}
+                            >
+                              Save
+                            </Button>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            ₹{service.price}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {editingServiceIndex !== index && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEditService(index)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleRemoveService(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="date" className="text-sm">
+                Date
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-10 w-full justify-start text-left font-normal",
+                      !formData.date && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.date ? (
+                      format(formData.date, "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.date}
+                    onSelect={(date) => {
+                      if (date instanceof Date) {
+                        setFormData({ ...formData, date });
+                      }
+                    }}
+                    disabled={(date) =>
+                      date > new Date() || date < new Date("1900-01-01")
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="payment" className="text-sm">
+                Payment Method
+              </Label>
+              <Select
+                value={formData.paymentMethod}
+                onValueChange={(v) =>
+                  setFormData({ ...formData, paymentMethod: v })
+                }
+                required
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_METHODS.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Payment Information</CardTitle>
+          <CardDescription className="text-xs">
+            Enter amount and discount details
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount" className="text-sm">
+                Amount (₹)
+              </Label>
+              <Input
+                id="amount"
+                type="number"
+                value={formData.amount || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, amount: Number(e.target.value) })
+                }
+                placeholder="0.00"
+                required
+                className="h-10"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="discount" className="text-sm">
+                Discount (%)
+              </Label>
+              <Input
+                id="discount"
+                type="number"
+                value={formData.discount || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, discount: Number(e.target.value) })
+                }
+                placeholder="0"
+                min="0"
+                max="100"
+                className="h-10"
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Client Name</Label>
-            <Input
-              placeholder="Enter client name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="border-slate-300 h-11"
-              required
-            />
-          </div>
+          <Separator />
 
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Phone Number</Label>
-            <Input
-              placeholder="Enter phone number"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="border-slate-300 h-11"
-              required
-            />
-          </div>
+          <Card className="bg-muted/50 border-dashed">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-semibold">Final Amount</span>
+                <span className="text-2xl font-bold">
+                  ₹{finalAmount.toFixed(2)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </CardContent>
+      </Card>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Service</Label>
-            <Select value={formData.service} onValueChange={handleServiceChange}>
-              <SelectTrigger className="border-slate-300 h-11">
-                <SelectValue placeholder="Select service" />
-              </SelectTrigger>
-              <SelectContent>
-                {SERVICES.map((s) => (
-                  <SelectItem key={s.name} value={s.name}>
-                    {s.name} (₹{s.price})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Stylist</Label>
-            <Select value={formData.stylist} onValueChange={(v) => setFormData({ ...formData, stylist: v })}>
-              <SelectTrigger className="border-slate-300 h-11">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STYLISTS.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Amount (₹)</Label>
-            <Input
-              type="number"
-              value={formData.amount || ""}
-              onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
-              className="border-slate-300 h-11"
-              placeholder="0.00"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Discount (%)</Label>
-            <Input
-              type="number"
-              value={formData.discount || ""}
-              onChange={(e) => setFormData({ ...formData, discount: Number(e.target.value) })}
-              className="border-slate-300 h-11"
-              placeholder="0"
-              min="0"
-              max="100"
-            />
-          </div>
-        </div>
-
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
-          <span className="text-blue-900 font-bold text-lg">Final Amount (₹)</span>
-          <span className="text-blue-900 font-extrabold text-2xl">{finalAmount.toFixed(2)}</span>
-        </div>
-      </form>
-
-      <div className="flex items-center gap-3 p-6 border-t bg-slate-50/50">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          className="flex-1 h-11 border-slate-300 font-semibold bg-transparent"
-        >
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          disabled={loading}
-          onClick={handleSubmit}
-          className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-        >
-          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-          Add Sale
-        </Button>
-      </div>
-    </div>
-  )
+      <Button type="submit" className="w-full h-11" disabled={loading}>
+        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {loading
+          ? appointment?.id
+            ? "Updating..."
+            : "Adding..."
+          : appointment?.id
+            ? "Update Sale"
+            : "Add Sale"}
+      </Button>
+    </form>
+  );
 }

@@ -18,47 +18,35 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export default function SignUpPage() {
+export default function SignInPage() {
   useEffect(() => {
-    document.title = "Solune Studio - Sign Up";
+    document.title = "Solune Studio - Sign In";
   }, []);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
+  const { signIn } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      await signUp(email, password);
-      toast.success("Account created successfully");
+      await signIn(email, password);
+      toast.success("Signed in successfully");
       router.push("/sales");
     } catch (err: any) {
       const errorMessage =
-        err.code === "auth/email-already-in-use"
-          ? "This email is already registered. Please sign in instead."
-          : err.code === "auth/invalid-email"
-            ? "Invalid email address"
-            : err.code === "auth/weak-password"
-              ? "Password is too weak. Use at least 6 characters."
-              : "Failed to create account. Please try again.";
+        err.code === "auth/invalid-credential"
+          ? "Invalid email or password"
+          : err.code === "auth/user-not-found"
+            ? "No account found with this email"
+            : err.code === "auth/wrong-password"
+              ? "Incorrect password"
+              : "Failed to sign in. Please try again.";
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -79,10 +67,8 @@ export default function SignUpPage() {
             />
           </div>
           <div>
-            <CardTitle className="text-2xl">Create account</CardTitle>
-            <CardDescription>
-              Get started with your salon dashboard
-            </CardDescription>
+            <CardTitle className="text-2xl">Welcome back</CardTitle>
+            <CardDescription>Sign in to your salon dashboard</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -123,42 +109,17 @@ export default function SignUpPage() {
                 </button>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm password</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {loading ? "Creating account..." : "Create account"}
+              {loading ? "Signing in..." : "Sign in"}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
-              Already have an account?{" "}
+              Don't have an account?{" "}
               <Link
-                href="/signin"
+                href="/signup"
                 className="underline underline-offset-4 hover:text-primary"
               >
-                Sign in
+                Sign up
               </Link>
             </p>
           </form>

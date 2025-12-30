@@ -1,5 +1,6 @@
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { FirebaseApp, getApps, initializeApp } from "firebase/app";
+import { Auth, getAuth } from "firebase/auth";
+import { Firestore, getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,29 +12,14 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-let app: FirebaseApp | null = null;
-let auth: Auth | null = null;
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
 
-// Lazily initialize Firebase on the client to avoid server-side evaluation
-export function initFirebaseClient() {
-  if (typeof window === 'undefined') return;
-  if (app && auth) return;
-
-  if (!getApps().length) {
-    app = initializeApp(firebaseConfig as any);
-  } else {
-    app = getApps()[0];
-  }
-
-  auth = getAuth(app as FirebaseApp);
+if (typeof window !== "undefined") {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  auth = getAuth(app);
+  db = getFirestore(app);
 }
 
-export function getAuthClient(): Auth {
-  if (!auth) {
-    initFirebaseClient();
-    if (!auth) throw new Error('Firebase auth not initialized on client')
-  }
-  return auth as Auth;
-}
-
-export { app };
+export { auth, db };

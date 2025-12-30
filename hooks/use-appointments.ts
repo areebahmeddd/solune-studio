@@ -1,56 +1,102 @@
-"use client"
+"use client";
 
-import { create } from "zustand"
-import { persist } from "zustand/middleware"
+import { db } from "@/lib/firebase";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  updateDoc,
+} from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
-// <CHANGE> Reverted to simple single-service schema
+export interface ServiceItem {
+  name: string;
+  price: number;
+}
+
 export interface Appointment {
-  id: string
-  name: string
-  phone: string
-  service: string
-  date: string
-  amount: number
-  discount: number
-  paymentMethod: string
-  stylist: string
-  timestamp: string
+  id: string;
+  name: string;
+  phone: string;
+  services: ServiceItem[];
+  date: string;
+  amount: number;
+  discount: number;
+  paymentMethod: string;
+  stylist: string;
+  timestamp: string;
 }
 
-interface AppointmentsStore {
-  appointments: Appointment[]
-  addAppointment: (appointment: Omit<Appointment, "id">) => Promise<void>
-  deleteAppointment: (id: string) => void
-  getAppointmentsByDate: (date: string) => Appointment[]
-}
+export const useAppointments = () => {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export const useAppointments = create<AppointmentsStore>()(
-  persist(
-    (set, get) => ({
-      appointments: [],
+  useEffect(() => {
+    const q = query(
+      collection(db, "appointments"),
+      orderBy("timestamp", "desc"),
+    );
 
-      addAppointment: async (appointment) => {
-        const newAppointment: Appointment = {
-          ...appointment,
-          id: `apt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        }
-        set((state) => ({
-          appointments: [newAppointment, ...state.appointments],
-        }))
-      },
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data: Appointment[] = [];
+      snapshot.forEach((doc) => {
+        data.push({ id: doc.id, ...doc.data() } as Appointment);
+      });
+      setAppointments(data);
+      setLoading(false);
+    });
 
-      deleteAppointment: (id) => {
-        set((state) => ({
-          appointments: state.appointments.filter((apt) => apt.id !== id),
-        }))
-      },
+    return () => unsubscribe();
+  }, []);
 
-      getAppointmentsByDate: (date) => {
-        return get().appointments.filter((apt) => apt.date === date)
-      },
-    }),
-    {
-      name: "salon-appointments",
-    },
-  ),
-)
+  const addAppointment = async (appointment: Omit<Appointment, "id">) => {
+    const toastId = `add-appointment-${Date.now()}`;
+    try {
+      await addDoc(collection(db, "appointments"), {
+        ...appointment,
+        timestamp: new Date().toISOString(),
+      });
+      toast.success("Appointment added successfully", { id: toastId });
+    } catch (error) {
+      toast.error("Failed to add appointment", { id: toastId });
+    }
+  };
+
+  const updateAppointment = async (
+    id: string,
+    appointment: Omit<Appointment, "id">,
+  ) => {
+    const toastId = `update-appointment-${id}`;
+    try {
+      await updateDoc(doc(db, "appointments", id), {
+        ...appointment,
+        timestamp: new Date().toISOString(),
+      });
+      toast.success("Appointment updated successfully", { id: toastId });
+    } catch (error) {
+      toast.error("Failed to update appointment", { id: toastId });
+    }
+  };
+
+  const deleteAppointment = async (id: string) => {
+    const toastId = `delete-appointment-${id}`;
+    try {
+      await deleteDoc(doc(db, "appointments", id));
+      toast.success("Appointment deleted successfully", { id: toastId });
+    } catch (error) {
+      toast.error("Failed to delete appointment", { id: toastId });
+    }
+  };
+
+  return {
+    appointments,
+    addAppointment,
+    updateAppointment,
+    deleteAppointment,
+  };
+};

@@ -1,163 +1,339 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Search, SlidersHorizontal, Trash2, Edit2, Calendar, ChevronDown } from "lucide-react"
-import { useAppointments } from "@/hooks/use-appointments"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useAppointments } from "@/hooks/use-appointments";
+import { cn } from "@/lib/utils";
+import { format, isToday, isWithinInterval, subDays } from "date-fns";
+import { CalendarIcon, Edit, Filter, Search, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
-export function AppointmentsList() {
-  const { appointments, deleteAppointment } = useAppointments()
-  const [search, setSearch] = useState("")
+type DateRange = { from?: Date; to?: Date };
 
-  const filteredAppointments = appointments.filter(
+interface AppointmentsListProps {
+  onEdit?: (appointment: any) => void;
+  onDelete?: (appointment: any) => void;
+  dateFilter?: "all" | "today" | "7days" | "30days";
+  onFilterChange?: (value: "all" | "today" | "7days" | "30days") => void;
+}
+
+export function AppointmentsList({
+  onEdit,
+  onDelete,
+  dateFilter,
+  onFilterChange,
+}: AppointmentsListProps = {}) {
+  const { appointments } = useAppointments();
+  const [search, setSearch] = useState("");
+  const [localDateFilter, setLocalDateFilter] = useState<
+    "all" | "today" | "7days" | "30days"
+  >(dateFilter ?? "all");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(
+    undefined,
+  );
+
+  useEffect(() => {
+    if (dateFilter !== undefined) {
+      setLocalDateFilter(dateFilter);
+    }
+  }, [dateFilter]);
+
+  const effectiveDateFilter = dateFilter ?? localDateFilter;
+
+  const getFilteredByDate = () => {
+    const now = new Date();
+
+    if (customDateRange?.from) {
+      return appointments.filter((apt) => {
+        const aptDate = new Date(apt.date);
+        if (customDateRange.to && customDateRange.from) {
+          return isWithinInterval(aptDate, {
+            start: customDateRange.from,
+            end: customDateRange.to,
+          });
+        }
+        if (customDateRange.from) {
+          return aptDate.toDateString() === customDateRange.from.toDateString();
+        }
+        return true;
+      });
+    }
+
+    switch (effectiveDateFilter) {
+      case "today":
+        return appointments.filter((apt) => isToday(new Date(apt.date)));
+      case "7days":
+        return appointments.filter((apt) =>
+          isWithinInterval(new Date(apt.date), {
+            start: subDays(now, 7),
+            end: now,
+          }),
+        );
+      case "30days":
+        return appointments.filter((apt) =>
+          isWithinInterval(new Date(apt.date), {
+            start: subDays(now, 30),
+            end: now,
+          }),
+        );
+      default:
+        return appointments;
+    }
+  };
+
+  const dateFilteredAppointments = getFilteredByDate();
+
+  const filteredAppointments = dateFilteredAppointments.filter(
     (app) =>
       app.name.toLowerCase().includes(search.toLowerCase()) ||
-      app.service.toLowerCase().includes(search.toLowerCase()) ||
+      (app.services &&
+        app.services.some((s: any) =>
+          s.name.toLowerCase().includes(search.toLowerCase()),
+        )) ||
       app.stylist.toLowerCase().includes(search.toLowerCase()),
-  )
+  );
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-    }).format(amount)
-  }
+    }).format(amount);
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Filter Bar */}
-      <div className="flex items-center gap-4 bg-card border rounded-xl p-3 shadow-sm">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search clients, services, or stylists..."
-            className="pl-9 border-none bg-transparent focus-visible:ring-0 text-sm h-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center gap-2 border-l pl-4">
-          <Button variant="ghost" size="sm" className="h-9 gap-2 text-muted-foreground hover:text-foreground">
-            <SlidersHorizontal className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="h-9 gap-2 text-muted-foreground hover:text-foreground">
-            Today
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Records Table */}
-      <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
-        <div className="p-6 border-b flex items-center justify-between">
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-lg">Sales Records</h3>
-            <p className="text-sm text-muted-foreground mt-0.5">{filteredAppointments.length} sales found</p>
+            <CardTitle>Sales Records</CardTitle>
+            <CardDescription>
+              {filteredAppointments.length} sales found
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "justify-start text-left font-normal h-10",
+                    !customDateRange && "text-muted-foreground",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {customDateRange?.from ? (
+                    customDateRange.to ? (
+                      <>
+                        {format(customDateRange.from, "LLL dd, y")} -{" "}
+                        {format(customDateRange.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(customDateRange.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="range"
+                  defaultMonth={customDateRange?.from}
+                  selected={customDateRange}
+                  onSelect={(newDate) => {
+                    const rangeDate = newDate as DateRange | undefined;
+                    setCustomDateRange(rangeDate);
+                  }}
+                  numberOfMonths={2}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            {customDateRange && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10"
+                onClick={() => setCustomDateRange(undefined)}
+                title="Clear date range"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+            <Select
+              value={effectiveDateFilter}
+              onValueChange={(v) =>
+                onFilterChange
+                  ? onFilterChange(v as any)
+                  : setLocalDateFilter(v as any)
+              }
+            >
+              <SelectTrigger className="w-[165px] h-10">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="7days">Last 7 Days</SelectItem>
+                <SelectItem value="30days">Last 30 Days</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative w-72">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, service..."
+                className="pl-9 h-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
         </div>
-
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-muted/30">
-              <TableRow className="hover:bg-transparent border-none">
-                <TableHead className="w-12 font-semibold">ID</TableHead>
-                <TableHead className="font-semibold whitespace-nowrap">Visit Date</TableHead>
-                <TableHead className="font-semibold whitespace-nowrap">Client Name</TableHead>
-                <TableHead className="font-semibold whitespace-nowrap">Service</TableHead>
-                <TableHead className="font-semibold whitespace-nowrap">Stylist</TableHead>
-                <TableHead className="font-semibold whitespace-nowrap">Method</TableHead>
-                <TableHead className="font-semibold whitespace-nowrap">Amount</TableHead>
-                <TableHead className="font-semibold whitespace-nowrap">Discount</TableHead>
-                <TableHead className="font-semibold whitespace-nowrap">Total</TableHead>
-                <TableHead className="text-right font-semibold">Actions</TableHead>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">#</TableHead>
+              <TableHead className="w-[120px]">Date</TableHead>
+              <TableHead className="w-[150px]">Client</TableHead>
+              <TableHead className="w-[180px]">Service</TableHead>
+              <TableHead className="w-[140px]">Stylist</TableHead>
+              <TableHead className="w-[100px]">Payment</TableHead>
+              <TableHead className="w-[120px]">Amount</TableHead>
+              <TableHead className="w-[100px]">Discount</TableHead>
+              <TableHead className="w-[120px] text-right">Total</TableHead>
+              <TableHead className="w-[100px] text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredAppointments.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} className="h-24 text-center">
+                  No sales found
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAppointments.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="h-64 text-center">
-                    <div className="flex flex-col items-center justify-center text-muted-foreground">
-                      <Calendar className="h-10 w-10 mb-4 opacity-20" />
-                      <p className="font-medium">No records matching your search</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredAppointments.map((appointment, index) => {
-                  const discountAmount = (appointment.amount * appointment.discount) / 100
-                  const finalAmount = appointment.amount - discountAmount
+            ) : (
+              filteredAppointments.map((appointment, index) => {
+                const discountAmount =
+                  (appointment.amount * appointment.discount) / 100;
+                const finalAmount = appointment.amount - discountAmount;
 
-                  return (
-                    <TableRow key={appointment.id} className="group transition-colors hover:bg-muted/20">
-                      <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {format(new Date(appointment.date), "dd/MM/yyyy")}
-                      </TableCell>
-                      <TableCell className="font-semibold">{appointment.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="font-normal bg-secondary/50 hover:bg-secondary/50">
-                          {appointment.service}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{appointment.stylist}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "rounded-full px-3 py-0 font-medium text-[10px] uppercase tracking-wider",
-                            appointment.paymentMethod === "Cash"
-                              ? "bg-green-500/10 text-green-600 border-green-500/20"
-                              : "bg-blue-500/10 text-blue-600 border-blue-500/20",
-                          )}
-                        >
-                          {appointment.paymentMethod}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{formatCurrency(appointment.amount)}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {appointment.discount > 0 ? (
-                          <span className="text-orange-600 font-medium">
-                            {appointment.discount}% (-{formatCurrency(discountAmount)})
-                          </span>
+                return (
+                  <TableRow key={appointment.id}>
+                    <TableCell className="font-medium">{index + 1}</TableCell>
+                    <TableCell>
+                      {format(new Date(appointment.date), "dd/MM/yyyy")}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {appointment.name}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {appointment.services &&
+                        appointment.services.length > 0 ? (
+                          appointment.services.map(
+                            (service: any, idx: number) => (
+                              <Badge key={idx} variant="secondary">
+                                {service.name}
+                              </Badge>
+                            ),
+                          )
                         ) : (
-                          <span>-</span>
+                          <Badge variant="secondary">No services</Badge>
                         )}
-                      </TableCell>
-                      <TableCell className="font-bold text-foreground whitespace-nowrap">
-                        {formatCurrency(finalAmount)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => deleteAppointment(appointment.id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    </div>
-  )
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {appointment.stylist}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={
+                          appointment.paymentMethod === "Cash"
+                            ? "bg-green-50 text-green-700 ring-green-700/10 border-green-200"
+                            : appointment.paymentMethod === "Card"
+                              ? "bg-blue-50 text-blue-700 ring-blue-700/10 border-blue-200"
+                              : appointment.paymentMethod === "UPI"
+                                ? "bg-purple-50 text-purple-700 ring-purple-700/10 border-purple-200"
+                                : "bg-gray-50 text-gray-700 ring-gray-700/10 border-gray-200"
+                        }
+                      >
+                        {appointment.paymentMethod}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{formatCurrency(appointment.amount)}</TableCell>
+                    <TableCell>
+                      {appointment.discount > 0 ? (
+                        <span className="text-orange-600 font-medium">
+                          {appointment.discount}%
+                        </span>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">
+                      {formatCurrency(finalAmount)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => onEdit?.(appointment)}
+                          title="Edit sale"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => onDelete?.(appointment)}
+                          title="Delete sale"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
 }

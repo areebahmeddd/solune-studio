@@ -1,0 +1,35 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="100" cy="100" r="95" fill="#F5F2E8" stroke="#E8B4B8" stroke-width="4"/>
+  
+  <!-- Sun Rays -->
+  <g fill="#D4AF37" stroke="#D4AF37" stroke-width="1.5">
+    <!-- Top rays -->
+    <path d="M100 25 L95 35 L105 35 Z"/>
+    <path d="M125 30 L122 40 L130 38 Z"/>
+    <path d="M145 45 L140 52 L148 48 Z"/>
+    <path d="M160 65 L152 70 L158 78 Z"/>
+    <path d="M165 90 L155 92 L160 100 Z"/>
+    
+    <!-- Left side -->
+    <path d="M75 30 L78 40 L70 38 Z"/>
+    <path d="M55 45 L60 52 L52 48 Z"/>
+    <path d="M40 65 L48 70 L42 78 Z"/>
+    <path d="M35 90 L45 92 L40 100 Z"/>
+  </g>
+  
+  <!-- Sun Semi-circle -->
+  <path d="M70 80 Q100 50 130 80 L130 90 Q100 75 70 90 Z" fill="#D4AF37"/>
+  
+  <!-- Main Text -->
+  <text x="100" y="115" text-anchor="middle" font-family="serif" font-size="24" font-weight="bold" fill="#2C1810">SOLUNE</text>
+  <text x="100" y="140" text-anchor="middle" font-family="serif" font-size="24" font-weight="bold" fill="#2C1810">STUDIO</text>
+  
+  <!-- Decorative Line -->
+  <line x1="60" y1="155" x2="85" y2="155" stroke="#D4AF37" stroke-width="1"/>
+  <line x1="115" y1="155" x2="140" y2="155" stroke="#D4AF37" stroke-width="1"/>
+  
+  <!-- Decorative Diamond -->
+  <path d="M100 150 L105 155 L100 160 L95 155 Z" fill="#D4AF37"/>
+  <path d="M100 152 L102 155 L100 158 L98 155 Z" fill="#F5F2E8"/>
+</svg>

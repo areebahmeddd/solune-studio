@@ -1,0 +1,55 @@
+# LLMs.txt for Solune Studio
+
+
+## Website Overview
+
+Solune Studio is a salon management dashboard built with Next.js. It provides a complete solution for managing salon sales, expenses, client promotions, analytics, and business settings in a modern, user-friendly interface.
+
+
+## Site Structure
+
+- Home (`/`): Landing page with authentication
+- Login (`/signin`): User authentication
+- Signup (`/signup`): New user registration
+- Sales (`/sales`): Sales records and appointment management
+- Expenses (`/expenses`): Business expense tracking
+- Promotions (`/promotions`): Client directory with WhatsApp marketing
+- Analytics (`/analytics`): Business insights with charts and metrics
+- Settings (`/settings`): Service and stylist management
+
+
+## Tech Stack
+
+- Frontend: Next.js 15.5.9, React 19.0.0, TypeScript 5.7.3
+- State Management: Zustand 5.0.2 with localStorage persistence
+- Styling: Tailwind CSS 3.4.17
+- UI Components: Radix UI primitives
+- Charts: Recharts 2.15.0
+- Date Handling: date-fns 4.1.0, react-day-picker 9.13.0
+- Icons: Lucide React 0.468.0
+- Notifications: Sonner 1.7.3
+
+
+## Key Features
+
+- Sales Management: Track appointments, services, payments, and discounts
+- Expense Tracking: Monitor business expenses with date filtering
+- Client Promotions: Bulk WhatsApp messaging with client directory
+- Business Analytics: Revenue insights, service distribution, payment methods
+- Service Management: Add/edit services with categories (Men/Women)
+- Stylist Management: Manage stylists with gender tracking
+- Multi-Select Actions: Bulk operations for client promotions
+- Date Filtering: Today, Last 7/30 days, custom date ranges
+- Payment Methods: Cash, Card, UPI with color-coded badges
+- Export Functionality: CSV export for sales reports
+
+
+## Contact Information
+
+- Repository: `https://github.com/areebahmeddd/solune-studio`
+- GitHub: `@areebahmeddd`
+
+
+## License
+
+MIT License
