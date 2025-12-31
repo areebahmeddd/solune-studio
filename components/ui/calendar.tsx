@@ -224,7 +224,7 @@ function Calendar({
                         className={cn(
                           "h-9 w-9 rounded-md text-sm font-normal transition-colors",
                           "hover:bg-accent hover:text-accent-foreground",
-                          "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                          "focus-visible:outline-none",
                           "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent",
                           isToday && !isSelected && "bg-accent font-semibold",
                           isSelected &&

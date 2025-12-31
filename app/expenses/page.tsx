@@ -88,7 +88,12 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      toast.error("Please sign in to access this page");
+      const isSigningOut = sessionStorage.getItem("signing-out");
+      if (!isSigningOut) {
+        toast.error("Please sign in to access this page");
+      } else {
+        sessionStorage.removeItem("signing-out");
+      }
       router.push("/signin");
     }
   }, [user, loading, router]);
@@ -266,7 +271,11 @@ export default function ExpensesPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={exportToCSV}>
+            <Button
+              variant="outline"
+              onClick={exportToCSV}
+              disabled={filteredExpenses.length === 0}
+            >
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>
@@ -348,7 +357,7 @@ export default function ExpensesPage() {
                           format(customDateRange.from, "LLL dd, y")
                         )
                       ) : (
-                        <span>Pick date range</span>
+                        <span>Pick a date range</span>
                       )}
                     </Button>
                   </PopoverTrigger>

@@ -79,7 +79,7 @@ export default function SignUpPage() {
             />
           </div>
           <div>
-            <CardTitle className="text-2xl">Create account</CardTitle>
+            <CardTitle className="text-2xl">Create account!</CardTitle>
             <CardDescription>
               Get started with your salon dashboard
             </CardDescription>

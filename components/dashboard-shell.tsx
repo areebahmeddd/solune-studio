@@ -29,13 +29,27 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const { user, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      const savedState = localStorage.getItem("sidebar-collapsed");
+      return savedState === "true";
+    }
+    return false;
+  });
+
+  const toggleSidebar = () => {
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+    localStorage.setItem("sidebar-collapsed", String(newState));
+  };
 
   const handleSignOut = async () => {
     try {
+      sessionStorage.setItem("signing-out", "true");
       await signOut();
       router.push("/signin");
     } catch (error) {
+      sessionStorage.removeItem("signing-out");
       toast.error("Failed to sign out");
     }
   };
@@ -147,7 +161,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         </div>
 
         <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={toggleSidebar}
           className="absolute -right-3 top-20 h-6 w-6 rounded-full border bg-card shadow-md hover:bg-accent flex items-center justify-center z-10"
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >

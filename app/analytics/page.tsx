@@ -66,7 +66,12 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      toast.error("Please sign in to access this page");
+      const isSigningOut = sessionStorage.getItem("signing-out");
+      if (!isSigningOut) {
+        toast.error("Please sign in to access this page");
+      } else {
+        sessionStorage.removeItem("signing-out");
+      }
       router.push("/signin");
     }
   }, [user, loading, router]);

@@ -13,7 +13,6 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -67,7 +66,7 @@ export default function SignInPage() {
             />
           </div>
           <div>
-            <CardTitle className="text-2xl">Welcome back</CardTitle>
+            <CardTitle className="text-2xl">Welcome back!</CardTitle>
             <CardDescription>Sign in to your salon dashboard</CardDescription>
           </div>
         </CardHeader>
@@ -113,15 +112,6 @@ export default function SignInPage() {
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {loading ? "Signing in..." : "Sign in"}
             </Button>
-            <p className="text-sm text-center text-muted-foreground">
-              Don't have an account?{" "}
-              <Link
-                href="/signup"
-                className="underline underline-offset-4 hover:text-primary"
-              >
-                Sign up
-              </Link>
-            </p>
           </form>
         </CardContent>
       </Card>

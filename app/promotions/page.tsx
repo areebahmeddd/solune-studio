@@ -93,7 +93,12 @@ export default function PromotionsPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      toast.error("Please sign in to access this page");
+      const isSigningOut = sessionStorage.getItem("signing-out");
+      if (!isSigningOut) {
+        toast.error("Please sign in to access this page");
+      } else {
+        sessionStorage.removeItem("signing-out");
+      }
       router.push("/signin");
     }
   }, [user, loading, router]);
@@ -322,7 +327,7 @@ export default function PromotionsPage() {
                 <div className="relative w-64">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by name or phone..."
+                    placeholder="Search by name, phone..."
                     className="pl-8 h-10"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
