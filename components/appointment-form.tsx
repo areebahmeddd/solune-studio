@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useAppointments } from "@/hooks/use-appointments";
+import { useServiceGroups } from "@/hooks/use-service-groups";
 import { useServices } from "@/hooks/use-services";
 import { useStylists } from "@/hooks/use-stylists";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ export function AppointmentForm({
 }: AppointmentFormProps) {
   const { addAppointment, updateAppointment } = useAppointments();
   const { services } = useServices();
+  const { serviceGroups } = useServiceGroups();
   const { stylists } = useStylists();
   const [loading, setLoading] = useState(false);
 
@@ -55,6 +57,15 @@ export function AppointmentForm({
   const sortedStylists = [...stylists].sort((a, b) =>
     a.name.localeCompare(b.name),
   );
+
+  // Group services by their groups
+  const groupedServices = serviceGroups.map((group) => ({
+    group,
+    services: sortedServices.filter((s) => s.groupId === group.id),
+  }));
+
+  // Services without a group (ungrouped)
+  const ungroupedServices = sortedServices.filter((s) => !s.groupId);
 
   const [formData, setFormData] = useState({
     name: appointment?.name || "",
@@ -286,12 +297,38 @@ export function AppointmentForm({
                   <SelectTrigger className="h-10">
                     <SelectValue placeholder="Select service" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {sortedServices.map((s) => (
-                      <SelectItem key={s.name} value={s.name}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
+                  <SelectContent className="max-h-[300px]">
+                    {groupedServices.map(
+                      ({ group, services: groupServices }) =>
+                        groupServices.length > 0 ? (
+                          <div key={group.id}>
+                            <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                              {group.name}
+                            </div>
+                            {groupServices.map((s) => (
+                              <SelectItem
+                                key={s.id}
+                                value={s.name}
+                                className="pl-6"
+                              >
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </div>
+                        ) : null,
+                    )}
+                    {ungroupedServices.length > 0 && (
+                      <>
+                        {groupedServices.some(
+                          ({ services: gs }) => gs.length > 0,
+                        ) && <div className="h-px bg-border my-1" />}
+                        {ungroupedServices.map((s) => (
+                          <SelectItem key={s.id} value={s.name}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
                 <Button

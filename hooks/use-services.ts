@@ -18,6 +18,7 @@ export interface Service {
   name: string;
   category: "men" | "women";
   price: number;
+  groupId?: string;
 }
 
 export const useServices = () => {

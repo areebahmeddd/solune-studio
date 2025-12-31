@@ -36,9 +36,10 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
+import { useServiceGroups } from "@/hooks/use-service-groups";
 import { useServices } from "@/hooks/use-services";
 import { useStylists } from "@/hooks/use-stylists";
-import { Edit, Filter, Plus, Trash2 } from "lucide-react";
+import { Edit, Filter, Folder, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -51,6 +52,12 @@ export default function SettingsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { services, addService, updateService, deleteService } = useServices();
+  const {
+    serviceGroups,
+    addServiceGroup,
+    updateServiceGroup,
+    deleteServiceGroup,
+  } = useServiceGroups();
 
   const { stylists, addStylist, updateStylist, deleteStylist } = useStylists();
 
@@ -59,6 +66,12 @@ export default function SettingsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
   const [deletingService, setDeletingService] = useState<any>(null);
+
+  const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
+  const [isEditGroupModalOpen, setIsEditGroupModalOpen] = useState(false);
+  const [isDeleteGroupModalOpen, setIsDeleteGroupModalOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<any>(null);
+  const [deletingGroup, setDeletingGroup] = useState<any>(null);
 
   const [isAddStylistModalOpen, setIsAddStylistModalOpen] = useState(false);
   const [isEditStylistModalOpen, setIsEditStylistModalOpen] = useState(false);
@@ -71,6 +84,13 @@ export default function SettingsPage() {
     name: "",
     category: "men" as "men" | "women",
     price: 0,
+    groupId: "",
+  });
+
+  const [groupFormData, setGroupFormData] = useState({
+    name: "",
+    category: "both" as "men" | "women" | "both",
+    order: 0,
   });
 
   const [stylistFormData, setStylistFormData] = useState({
@@ -102,6 +122,15 @@ export default function SettingsPage() {
       name: "",
       category: "men",
       price: 0,
+      groupId: "",
+    });
+  };
+
+  const resetGroupForm = () => {
+    setGroupFormData({
+      name: "",
+      category: "both",
+      order: serviceGroups.length,
     });
   };
 
@@ -118,11 +147,17 @@ export default function SettingsPage() {
       return;
     }
 
-    await addService({
+    const serviceData: any = {
       name: formData.name,
       category: formData.category,
       price: formData.price,
-    });
+    };
+
+    if (formData.groupId) {
+      serviceData.groupId = formData.groupId;
+    }
+
+    await addService(serviceData);
 
     setIsAddModalOpen(false);
     resetForm();
@@ -134,6 +169,7 @@ export default function SettingsPage() {
       name: service.name,
       category: service.category,
       price: service.price,
+      groupId: service.groupId || "",
     });
     setIsEditModalOpen(true);
   };
@@ -144,11 +180,17 @@ export default function SettingsPage() {
       return;
     }
 
-    await updateService(editingService.id, {
+    const serviceData: any = {
       name: formData.name,
       category: formData.category,
       price: formData.price,
-    });
+    };
+
+    if (formData.groupId) {
+      serviceData.groupId = formData.groupId;
+    }
+
+    await updateService(editingService.id, serviceData);
 
     setIsEditModalOpen(false);
     setEditingService(null);
@@ -221,6 +263,62 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAddGroup = async () => {
+    if (!groupFormData.name) {
+      toast.error("Please enter service group name");
+      return;
+    }
+
+    await addServiceGroup({
+      name: groupFormData.name,
+      category: groupFormData.category,
+      order: groupFormData.order,
+    });
+
+    setIsAddGroupModalOpen(false);
+    resetGroupForm();
+  };
+
+  const handleEditGroup = (group: any) => {
+    setEditingGroup(group);
+    setGroupFormData({
+      name: group.name,
+      category: group.category,
+      order: group.order,
+    });
+    setIsEditGroupModalOpen(true);
+  };
+
+  const handleUpdateGroup = async () => {
+    if (!groupFormData.name) {
+      toast.error("Please enter service group name");
+      return;
+    }
+
+    await updateServiceGroup(editingGroup.id, {
+      name: groupFormData.name,
+      category: groupFormData.category,
+      order: groupFormData.order,
+    });
+
+    setIsEditGroupModalOpen(false);
+    setEditingGroup(null);
+    resetGroupForm();
+  };
+
+  const handleDeleteGroup = (group: any) => {
+    setDeletingGroup(group);
+    setIsDeleteGroupModalOpen(true);
+  };
+
+  const confirmDeleteGroup = async () => {
+    if (deletingGroup) {
+      await deleteServiceGroup(deletingGroup.id);
+      setIsDeleteGroupModalOpen(false);
+      setDeletingGroup(null);
+    }
+  };
+
   const menServices = services
     .filter((s) => s.category === "men")
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -267,6 +365,7 @@ export default function SettingsPage() {
         <TableRow>
           <TableHead className="w-12">#</TableHead>
           <TableHead className="w-auto">Service Name</TableHead>
+          <TableHead className="w-[180px]">Group</TableHead>
           <TableHead className="w-[150px] text-right">Price</TableHead>
           <TableHead className="w-[100px] text-right">Actions</TableHead>
         </TableRow>
@@ -274,40 +373,53 @@ export default function SettingsPage() {
       <TableBody>
         {serviceList.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={4} className="h-24 text-center">
+            <TableCell colSpan={5} className="h-24 text-center">
               No services available
             </TableCell>
           </TableRow>
         ) : (
-          serviceList.map((service, index) => (
-            <TableRow key={service.id}>
-              <TableCell className="font-medium">{index + 1}</TableCell>
-              <TableCell className="font-medium">{service.name}</TableCell>
-              <TableCell className="text-right font-semibold">
-                {formatCurrency(service.price)}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleEdit(service)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleDelete(service)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))
+          serviceList.map((service, index) => {
+            const group = serviceGroups.find((g) => g.id === service.groupId);
+            return (
+              <TableRow key={service.id}>
+                <TableCell className="font-medium">{index + 1}</TableCell>
+                <TableCell className="font-medium">{service.name}</TableCell>
+                <TableCell>
+                  {group ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium bg-muted">
+                      <Folder className="h-3 w-3" />
+                      {group.name}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right font-semibold">
+                  {formatCurrency(service.price)}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleEdit(service)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleDelete(service)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })
         )}
       </TableBody>
     </Table>
@@ -327,7 +439,17 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-5">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Service Groups
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{serviceGroups.length}</div>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -369,6 +491,92 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Service Groups</CardTitle>
+              <CardDescription>
+                Create groups to organize your services (Hair Spa, Hair
+                Treatment, etc.)
+              </CardDescription>
+            </div>
+            <Button onClick={() => setIsAddGroupModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Group
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">#</TableHead>
+                  <TableHead>Group Name</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="w-24 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {serviceGroups.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                      No service groups available
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  serviceGroups.map((group, index) => (
+                    <TableRow key={group.id}>
+                      <TableCell className="font-medium">{index + 1}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Folder className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{group.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset capitalize ${
+                            group.category === "both"
+                              ? "bg-purple-50 text-purple-700 ring-purple-700/10"
+                              : group.category === "women"
+                                ? "bg-pink-50 text-pink-700 ring-pink-700/10"
+                                : "bg-blue-50 text-blue-700 ring-blue-700/10"
+                          }`}
+                        >
+                          {group.category === "both"
+                            ? "All"
+                            : group.category === "men"
+                              ? "Men"
+                              : "Women"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleEditGroup(group)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDeleteGroup(group)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -532,6 +740,30 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="group">Service Group (Optional)</Label>
+              <Select
+                value={formData.groupId || "unassigned"}
+                onValueChange={(v) =>
+                  setFormData({
+                    ...formData,
+                    groupId: v === "unassigned" ? "" : v,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a group or leave unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {serviceGroups.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      {group.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
               <Select
                 value={formData.category}
@@ -592,6 +824,30 @@ export default function SettingsPage() {
                   setFormData({ ...formData, name: e.target.value })
                 }
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-group">Service Group (Optional)</Label>
+              <Select
+                value={formData.groupId || "unassigned"}
+                onValueChange={(v) =>
+                  setFormData({
+                    ...formData,
+                    groupId: v === "unassigned" ? "" : v,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a group or leave unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {serviceGroups.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      {group.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-category">Category</Label>
@@ -794,6 +1050,147 @@ export default function SettingsPage() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmDeleteStylist}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddGroupModalOpen} onOpenChange={setIsAddGroupModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Service Group</DialogTitle>
+            <DialogDescription>
+              Create a new group to organize your services
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="group-name">Group Name</Label>
+              <Input
+                id="group-name"
+                placeholder="e.g., Hair Spa, Hair Treatment"
+                value={groupFormData.name}
+                onChange={(e) =>
+                  setGroupFormData({
+                    ...groupFormData,
+                    name: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="group-category">Category</Label>
+              <Select
+                value={groupFormData.category}
+                onValueChange={(v) =>
+                  setGroupFormData({
+                    ...groupFormData,
+                    category: v as "men" | "women" | "both",
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="both">All Services</SelectItem>
+                  <SelectItem value="men">Men's Services</SelectItem>
+                  <SelectItem value="women">Women's Services</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddGroupModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleAddGroup}>Add Group</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isEditGroupModalOpen}
+        onOpenChange={setIsEditGroupModalOpen}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Service Group</DialogTitle>
+            <DialogDescription>Update service group details</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-group-name">Group Name</Label>
+              <Input
+                id="edit-group-name"
+                placeholder="e.g., Hair Spa, Hair Treatment"
+                value={groupFormData.name}
+                onChange={(e) =>
+                  setGroupFormData({
+                    ...groupFormData,
+                    name: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-group-category">Category</Label>
+              <Select
+                value={groupFormData.category}
+                onValueChange={(v) =>
+                  setGroupFormData({
+                    ...groupFormData,
+                    category: v as "men" | "women" | "both",
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="both">All Services</SelectItem>
+                  <SelectItem value="men">Men's Services</SelectItem>
+                  <SelectItem value="women">Women's Services</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditGroupModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateGroup}>Update Group</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isDeleteGroupModalOpen}
+        onOpenChange={setIsDeleteGroupModalOpen}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Service Group</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this group? Services in this group
+              will not be deleted, but will become unassigned.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteGroupModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteGroup}>
               Delete
             </Button>
           </DialogFooter>
