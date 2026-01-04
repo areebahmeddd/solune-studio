@@ -3,13 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -48,6 +42,7 @@ interface AppointmentsListProps {
   ) => void;
   customDateRange?: DateRange;
   onCustomDateRangeChange?: (range: DateRange | undefined) => void;
+  onFilteredDataChange?: (data: any[]) => void;
 }
 
 export function AppointmentsList({
@@ -57,6 +52,7 @@ export function AppointmentsList({
   onFilterChange,
   customDateRange: externalCustomDateRange,
   onCustomDateRangeChange,
+  onFilteredDataChange,
 }: AppointmentsListProps = {}) {
   const { appointments } = useAppointments();
   const [search, setSearch] = useState("");
@@ -146,6 +142,17 @@ export function AppointmentsList({
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
 
+  useEffect(() => {
+    if (onFilteredDataChange) {
+      onFilteredDataChange(filteredAppointments);
+    }
+  }, [
+    filteredAppointments.length,
+    search,
+    effectiveDateFilter,
+    customDateRange,
+  ]);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -159,9 +166,6 @@ export function AppointmentsList({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>Sales Records</CardTitle>
-            <CardDescription>
-              {filteredAppointments.length} sales found
-            </CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <Popover>
@@ -169,7 +173,7 @@ export function AppointmentsList({
                 <Button
                   variant="outline"
                   className={cn(
-                    "justify-start text-left font-normal h-10",
+                    "justify-start text-left font-normal h-10 w-[180px]",
                     !customDateRange && "text-muted-foreground",
                   )}
                 >
@@ -184,7 +188,7 @@ export function AppointmentsList({
                       format(customDateRange.from, "LLL dd, y")
                     )
                   ) : (
-                    <span>Pick a date range</span>
+                    "Pick a date range"
                   )}
                 </Button>
               </PopoverTrigger>

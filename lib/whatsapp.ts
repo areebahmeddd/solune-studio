@@ -25,10 +25,8 @@ export interface WhatsAppResponse {
  * Example: +91 9876543210 -> 919876543210
  */
 export function formatPhoneNumber(phone: string): string {
-  // Remove all non-digit characters
   const cleaned = phone.replace(/\D/g, "");
 
-  // If it doesn't start with country code, assume India (+91)
   if (!cleaned.startsWith("91") && cleaned.length === 10) {
     return "91" + cleaned;
   }
@@ -48,7 +46,6 @@ export async function sendWhatsAppMessage(
 
   const formattedPhone = formatPhoneNumber(params.to);
 
-  // Validate phone number
   if (!formattedPhone || formattedPhone.length < 10) {
     return {
       success: false,
@@ -57,7 +54,6 @@ export async function sendWhatsAppMessage(
   }
 
   try {
-    // Send as text message
     const payload = {
       messaging_product: "whatsapp",
       recipient_type: "individual",
@@ -122,7 +118,6 @@ export async function sendBulkWhatsAppMessages(
       error: result.error,
     });
 
-    // Add delay between messages to respect rate limits
     if (recipients.indexOf(recipient) < recipients.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, delayBetweenMessages));
     }

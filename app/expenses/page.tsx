@@ -3,13 +3,7 @@
 import { DashboardShell } from "@/components/dashboard-shell";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -46,11 +40,14 @@ import { cn } from "@/lib/utils";
 import { format, subDays } from "date-fns";
 import {
   CalendarIcon,
+  DollarSign,
   Download,
   Edit,
   Filter,
   Plus,
+  ShoppingBag,
   Trash2,
+  TrendingUp,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -74,7 +71,7 @@ export default function ExpensesPage() {
   const [editingExpense, setEditingExpense] = useState<any>(null);
   const [deletingExpense, setDeletingExpense] = useState<any>(null);
   const [dateFilter, setDateFilter] = useState<
-    "all" | "today" | "7days" | "30days"
+    "all" | "today" | "7days" | "thisMonth" | "lastMonth"
   >("all");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(
     undefined,
@@ -184,10 +181,25 @@ export default function ExpensesPage() {
         return expenses.filter(
           (exp) => exp.date >= sevenDaysAgo && exp.date <= today,
         );
-      case "30days":
-        const thirtyDaysAgo = format(subDays(now, 30), "yyyy-MM-dd");
+      case "thisMonth":
+        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const thisMonthStartStr = format(thisMonthStart, "yyyy-MM-dd");
+        const thisMonthEndStr = format(thisMonthEnd, "yyyy-MM-dd");
         return expenses.filter(
-          (exp) => exp.date >= thirtyDaysAgo && exp.date <= today,
+          (exp) => exp.date >= thisMonthStartStr && exp.date <= thisMonthEndStr,
+        );
+      case "lastMonth":
+        const lastMonthStart = new Date(
+          now.getFullYear(),
+          now.getMonth() - 1,
+          1,
+        );
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+        const lastMonthStartStr = format(lastMonthStart, "yyyy-MM-dd");
+        const lastMonthEndStr = format(lastMonthEnd, "yyyy-MM-dd");
+        return expenses.filter(
+          (exp) => exp.date >= lastMonthStartStr && exp.date <= lastMonthEndStr,
         );
       default:
         return expenses;
@@ -274,10 +286,11 @@ export default function ExpensesPage() {
 
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Expenses
               </CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -286,10 +299,11 @@ export default function ExpensesPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Items
               </CardTitle>
+              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -298,10 +312,11 @@ export default function ExpensesPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Average Expense
               </CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -318,9 +333,6 @@ export default function ExpensesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Expense Records</CardTitle>
-                <CardDescription>
-                  {filteredExpenses.length} expenses found
-                </CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 <Popover>
@@ -328,7 +340,7 @@ export default function ExpensesPage() {
                     <Button
                       variant="outline"
                       className={cn(
-                        "justify-start text-left font-normal h-10 w-[200px]",
+                        "justify-start text-left font-normal h-10 w-[180px]",
                         !customDateRange && "text-muted-foreground",
                       )}
                     >
@@ -343,7 +355,7 @@ export default function ExpensesPage() {
                           format(customDateRange.from, "LLL dd, y")
                         )
                       ) : (
-                        <span>Pick a date range</span>
+                        "Pick a date range"
                       )}
                     </Button>
                   </PopoverTrigger>
@@ -381,10 +393,11 @@ export default function ExpensesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Time</SelectItem>
+                    <SelectItem value="all">All</SelectItem>
                     <SelectItem value="today">Today</SelectItem>
                     <SelectItem value="7days">Last 7 Days</SelectItem>
-                    <SelectItem value="30days">Last 30 Days</SelectItem>
+                    <SelectItem value="thisMonth">This Month</SelectItem>
+                    <SelectItem value="lastMonth">Last Month</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -42,6 +42,7 @@ export default function AppointmentsPage() {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(
     undefined,
   );
+  const [filteredAppointments, setFilteredAppointments] = useState<any[]>([]);
 
   const handleEdit = (appointment: any) => {
     setEditingAppointment(appointment);
@@ -67,7 +68,7 @@ export default function AppointmentsPage() {
   };
 
   const exportToCSV = () => {
-    if (appointments.length === 0) {
+    if (filteredAppointments.length === 0) {
       toast.error("No data to export");
       return;
     }
@@ -84,7 +85,7 @@ export default function AppointmentsPage() {
       "Final Amount",
     ];
 
-    const csvData = appointments.map((apt) => {
+    const csvData = filteredAppointments.map((apt) => {
       const discountAmount = (apt.amount * apt.discount) / 100;
       const finalAmount = apt.amount - discountAmount;
       const serviceNames =
@@ -154,7 +155,7 @@ export default function AppointmentsPage() {
             <Button
               variant="outline"
               onClick={exportToCSV}
-              disabled={appointments.length === 0}
+              disabled={filteredAppointments.length === 0}
             >
               <Download className="mr-2 h-4 w-4" />
               Export CSV
@@ -177,6 +178,7 @@ export default function AppointmentsPage() {
           onCustomDateRangeChange={setCustomDateRange}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onFilteredDataChange={setFilteredAppointments}
         />
       </div>
 

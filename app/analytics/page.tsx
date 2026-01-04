@@ -60,7 +60,7 @@ export default function AnalyticsPage() {
   const { appointments } = useAppointments();
   const [date, setDate] = useState<DateRange | undefined>(undefined);
   const [filterType, setFilterType] = useState<
-    "all" | "today" | "7days" | "30days" | "3months" | "year" | "custom"
+    "all" | "today" | "7days" | "thisMonth" | "lastMonth" | "year" | "custom"
   >("today");
 
   useEffect(() => {
@@ -95,15 +95,21 @@ export default function AnalyticsPage() {
         return appointments.filter(
           (apt) => apt.date >= sevenDaysAgo && apt.date <= today,
         );
-      case "30days":
-        const thirtyDaysAgo = format(subDays(now, 30), "yyyy-MM-dd");
+      case "thisMonth":
+        const thisMonthStart = format(startOfMonth(now), "yyyy-MM-dd");
+        const thisMonthEnd = format(endOfMonth(now), "yyyy-MM-dd");
         return appointments.filter(
-          (apt) => apt.date >= thirtyDaysAgo && apt.date <= today,
+          (apt) => apt.date >= thisMonthStart && apt.date <= thisMonthEnd,
         );
-      case "3months":
-        const threeMonthsAgo = format(subMonths(now, 3), "yyyy-MM-dd");
+      case "lastMonth":
+        const lastMonthDate = subMonths(now, 1);
+        const lastMonthStart = format(
+          startOfMonth(lastMonthDate),
+          "yyyy-MM-dd",
+        );
+        const lastMonthEnd = format(endOfMonth(lastMonthDate), "yyyy-MM-dd");
         return appointments.filter(
-          (apt) => apt.date >= threeMonthsAgo && apt.date <= today,
+          (apt) => apt.date >= lastMonthStart && apt.date <= lastMonthEnd,
         );
       case "year":
         const oneYearAgo = format(subYears(now, 1), "yyyy-MM-dd");
@@ -144,10 +150,10 @@ export default function AnalyticsPage() {
       monthlyLabel = "Today";
     } else if (filterType === "7days") {
       monthlyLabel = "Last 7 Days";
-    } else if (filterType === "30days") {
-      monthlyLabel = "Last 30 Days";
-    } else if (filterType === "3months") {
-      monthlyLabel = "Last 3 Months";
+    } else if (filterType === "thisMonth") {
+      monthlyLabel = "This Month";
+    } else if (filterType === "lastMonth") {
+      monthlyLabel = "Last Month";
     } else if (filterType === "year") {
       monthlyLabel = "Last Year";
     } else {
@@ -249,11 +255,13 @@ export default function AnalyticsPage() {
               services: {},
             };
           }
+
           const serviceRevenue = finalAmount / apt.services.length;
           stylistData[stylistName].revenue += serviceRevenue;
           stylistData[stylistName].services[service.name] =
             (stylistData[stylistName].services[service.name] || 0) + 1;
         });
+
         const uniqueStylists = new Set(
           apt.services.map(
             (s: any) => s.stylist || apt.stylist || "No stylist",
@@ -261,8 +269,7 @@ export default function AnalyticsPage() {
         );
         uniqueStylists.forEach((stylist) => {
           if (stylistData[stylist as string]) {
-            stylistData[stylist as string].appointments +=
-              1 / uniqueStylists.size;
+            stylistData[stylist as string].appointments += 1;
           }
         });
       } else if (apt.stylist) {
@@ -283,7 +290,7 @@ export default function AnalyticsPage() {
       .map(([name, data]) => ({
         name,
         revenue: data.revenue,
-        appointments: Math.round(data.appointments),
+        appointments: data.appointments,
         services: data.services,
       }))
       .sort((a, b) => b.revenue - a.revenue)
@@ -324,63 +331,6 @@ export default function AnalyticsPage() {
               Comprehensive insights into your salon business
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-[280px] justify-start text-left font-normal h-10",
-                    !date && "text-muted-foreground",
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date?.from ? (
-                    date.to ? (
-                      <>
-                        {format(date.from, "LLL dd, y")} -{" "}
-                        {format(date.to, "LLL dd, y")}
-                      </>
-                    ) : (
-                      format(date.from, "LLL dd, y")
-                    )
-                  ) : (
-                    <span>Pick a date range</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={(newDate) => {
-                    const rangeDate = newDate as DateRange | undefined;
-                    setDate(rangeDate);
-                    if (rangeDate?.from) {
-                      setFilterType("custom");
-                    }
-                  }}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-            {date && filterType === "custom" && (
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10"
-                onClick={() => {
-                  setDate(undefined);
-                  setFilterType("all");
-                }}
-                title="Clear date range"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -418,26 +368,26 @@ export default function AnalyticsPage() {
             Last 7 Days
           </Button>
           <Button
-            variant={filterType === "30days" ? "default" : "outline"}
+            variant={filterType === "thisMonth" ? "default" : "outline"}
             size="sm"
             onClick={() => {
-              setFilterType("30days");
+              setFilterType("thisMonth");
               setDate(undefined);
             }}
             className="min-w-[100px]"
           >
-            Last 30 Days
+            This Month
           </Button>
           <Button
-            variant={filterType === "3months" ? "default" : "outline"}
+            variant={filterType === "lastMonth" ? "default" : "outline"}
             size="sm"
             onClick={() => {
-              setFilterType("3months");
+              setFilterType("lastMonth");
               setDate(undefined);
             }}
             className="min-w-[100px]"
           >
-            Last 3 Months
+            Last Month
           </Button>
           <Button
             variant={filterType === "year" ? "default" : "outline"}
@@ -450,6 +400,62 @@ export default function AnalyticsPage() {
           >
             Last Year
           </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={filterType === "custom" ? "default" : "outline"}
+                size="sm"
+                className={cn(
+                  "min-w-[180px] justify-start text-left font-normal h-9",
+                  !date && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date?.from ? (
+                  date.to ? (
+                    <>
+                      {format(date.from, "MMM dd, y")} -{" "}
+                      {format(date.to, "MMM dd, y")}
+                    </>
+                  ) : (
+                    format(date.from, "MMM dd, y")
+                  )
+                ) : (
+                  "Pick a date range"
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={date?.from}
+                selected={date}
+                onSelect={(newDate) => {
+                  const rangeDate = newDate as DateRange | undefined;
+                  setDate(rangeDate);
+                  if (rangeDate?.from) {
+                    setFilterType("custom");
+                  }
+                }}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+          {date && filterType === "custom" && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => {
+                setDate(undefined);
+                setFilterType("all");
+              }}
+              title="Clear date range"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -460,10 +466,10 @@ export default function AnalyticsPage() {
                   ? "Today's Appointments"
                   : filterType === "7days"
                     ? "Last 7 Days Appointments"
-                    : filterType === "30days"
-                      ? "Last 30 Days Appointments"
-                      : filterType === "3months"
-                        ? "Last 3 Months Appointments"
+                    : filterType === "thisMonth"
+                      ? "This Month Appointments"
+                      : filterType === "lastMonth"
+                        ? "Last Month Appointments"
                         : filterType === "year"
                           ? "Last Year Appointments"
                           : "Total Appointments"}
@@ -479,10 +485,10 @@ export default function AnalyticsPage() {
                   ? "Scheduled for today"
                   : filterType === "7days"
                     ? "Appointments in last 7 days"
-                    : filterType === "30days"
-                      ? "Appointments in last 30 days"
-                      : filterType === "3months"
-                        ? "Appointments in last 3 months"
+                    : filterType === "thisMonth"
+                      ? "Appointments this month"
+                      : filterType === "lastMonth"
+                        ? "Appointments last month"
                         : filterType === "year"
                           ? "Appointments in last year"
                           : "All time appointments"}
@@ -496,10 +502,10 @@ export default function AnalyticsPage() {
                   ? "Today's Sales"
                   : filterType === "7days"
                     ? "Sales (Last 7 Days)"
-                    : filterType === "30days"
-                      ? "Sales (Last 30 Days)"
-                      : filterType === "3months"
-                        ? "Sales (Last 3 Months)"
+                    : filterType === "thisMonth"
+                      ? "Sales (This Month)"
+                      : filterType === "lastMonth"
+                        ? "Sales (Last Month)"
                         : filterType === "year"
                           ? "Sales (Last Year)"
                           : "Total Revenue"}
@@ -515,10 +521,10 @@ export default function AnalyticsPage() {
                   ? "Revenue generated today"
                   : filterType === "7days"
                     ? "Revenue in last 7 days"
-                    : filterType === "30days"
-                      ? "Revenue in last 30 days"
-                      : filterType === "3months"
-                        ? "Revenue in last 3 months"
+                    : filterType === "thisMonth"
+                      ? "Revenue this month"
+                      : filterType === "lastMonth"
+                        ? "Revenue last month"
                         : filterType === "year"
                           ? "Revenue in last year"
                           : "All time revenue"}
@@ -543,6 +549,9 @@ export default function AnalyticsPage() {
               </p>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -562,22 +571,6 @@ export default function AnalyticsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                UPI Collection
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(stats.upiRevenue)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats.upiCount} transactions
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
                 Card Collection
               </CardTitle>
               <CreditCard className="h-4 w-4 text-muted-foreground" />
@@ -588,6 +581,22 @@ export default function AnalyticsPage() {
               </div>
               <p className="text-xs text-muted-foreground">
                 {stats.cardCount} transactions
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                UPI Collection
+              </CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatCurrency(stats.upiRevenue)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {stats.upiCount} transactions
               </p>
             </CardContent>
           </Card>
@@ -613,6 +622,9 @@ export default function AnalyticsPage() {
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
+                      label={({ percent, name }) =>
+                        `${name}: ${((percent ?? 0) * 100).toFixed(1)}%`
+                      }
                     >
                       {stylistRevenueData.map((entry, index) => (
                         <Cell
@@ -646,14 +658,7 @@ export default function AnalyticsPage() {
               {stylistPerformance.length > 0 ? (
                 <div className="space-y-4">
                   {stylistPerformance.map((stylist, idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-lg border p-3 space-y-2"
-                      style={{
-                        borderColor: COLORS[idx % COLORS.length],
-                        borderWidth: 2,
-                      }}
-                    >
+                    <div key={idx} className="rounded-lg border p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold">{stylist.name}</h4>
                         <span className="text-sm font-medium text-green-600">
@@ -708,6 +713,10 @@ export default function AnalyticsPage() {
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
+                    label={({ percent }) => {
+                      const pct = (percent ?? 0) * 100;
+                      return `${pct.toFixed(1)}%`;
+                    }}
                   >
                     {serviceDistribution.map((entry, index) => (
                       <Cell
@@ -736,8 +745,8 @@ export default function AnalyticsPage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, value }) =>
-                      `${name}: ${formatCurrency(value)}`
+                    label={({ percent }) =>
+                      `${((percent ?? 0) * 100).toFixed(1)}%`
                     }
                     outerRadius={80}
                     fill="#8884d8"

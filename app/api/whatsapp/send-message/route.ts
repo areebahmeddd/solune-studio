@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    // Validate environment variables
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
     const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
 
@@ -11,8 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "WhatsApp API credentials not configured. Please set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN in environment variables.",
+          error: "WhatsApp API credentials not configured.",
         },
         { status: 500 },
       );
@@ -21,7 +19,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { recipients } = body;
 
-    // Validate request body
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
       return NextResponse.json(
         { success: false, error: "Invalid recipients data" },
@@ -29,7 +26,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Send messages
     const results = await sendBulkWhatsAppMessages(
       {
         phoneNumberId,
@@ -37,10 +33,9 @@ export async function POST(req: NextRequest) {
         apiVersion: process.env.WHATSAPP_API_VERSION || "v18.0",
       },
       recipients,
-      1000, // 1 second delay between messages
+      1000,
     );
 
-    // Count successes and failures
     const successCount = results.filter((r) => r.success).length;
     const failureCount = results.length - successCount;
 

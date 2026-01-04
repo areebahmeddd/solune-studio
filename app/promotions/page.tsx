@@ -2,13 +2,7 @@
 
 import { DashboardShell } from "@/components/dashboard-shell";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -38,7 +32,15 @@ import {
 import { useAppointments } from "@/hooks/use-appointments";
 import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
-import { Download, Filter, MessageCircle, Search } from "lucide-react";
+import {
+  DollarSign,
+  Download,
+  Filter,
+  MessageCircle,
+  Search,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -226,7 +228,6 @@ export default function PromotionsPage() {
       setIsBulkSend(false);
       setCustomMessage("");
     } catch (error) {
-      console.error("Error sending WhatsApp message:", error);
       toast.error("Failed to send message. Please try again.");
     }
   };
@@ -304,20 +305,22 @@ export default function PromotionsPage() {
 
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Clients
               </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{clientsData.length}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Revenue
               </CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -328,10 +331,11 @@ export default function PromotionsPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Avg Revenue/Client
               </CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -351,14 +355,11 @@ export default function PromotionsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Client Directory</CardTitle>
-                <CardDescription>
-                  {filteredClients.length} clients in database
-                  {selectedClients.size > 0 && (
-                    <span className="ml-2 text-primary font-medium">
-                      • {selectedClients.size} selected
-                    </span>
-                  )}
-                </CardDescription>
+                {selectedClients.size > 0 && (
+                  <p className="text-sm text-primary font-medium mt-1">
+                    {selectedClients.size} selected
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 {selectedClients.size > 0 && (

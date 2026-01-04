@@ -2,13 +2,7 @@
 
 import { DashboardShell } from "@/components/dashboard-shell";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +33,16 @@ import { useAuth } from "@/hooks/use-auth";
 import { useServiceGroups } from "@/hooks/use-service-groups";
 import { useServices } from "@/hooks/use-services";
 import { useStylists } from "@/hooks/use-stylists";
-import { Edit, Filter, Folder, Plus, Trash2 } from "lucide-react";
+import {
+  Edit,
+  Filter,
+  Folder,
+  Layers,
+  Plus,
+  Scissors,
+  Trash2,
+  User,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -451,50 +454,55 @@ export default function SettingsPage() {
 
         <div className="grid gap-4 md:grid-cols-5">
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Service Groups
               </CardTitle>
+              <Folder className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{serviceGroups.length}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Services
               </CardTitle>
+              <Layers className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{services.length}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Men's Services
               </CardTitle>
+              <User className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{menServices.length}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Women's Services
               </CardTitle>
+              <User className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{womenServices.length}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Stylists
               </CardTitle>
+              <Scissors className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stylists.length}</div>
@@ -502,42 +510,52 @@ export default function SettingsPage() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Settings Management</CardTitle>
-            <CardDescription>
-              Manage your service groups, services, and stylists
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="groups" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="groups">Service Groups</TabsTrigger>
-                <TabsTrigger value="services">Services</TabsTrigger>
-                <TabsTrigger value="stylists">Stylists</TabsTrigger>
-              </TabsList>
+        <Tabs defaultValue="groups" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="groups">
+              <Folder className="mr-2 h-4 w-4" />
+              Service Groups
+            </TabsTrigger>
+            <TabsTrigger value="services">
+              <Layers className="mr-2 h-4 w-4" />
+              Services
+            </TabsTrigger>
+            <TabsTrigger value="stylists">
+              <Scissors className="mr-2 h-4 w-4" />
+              Stylists
+            </TabsTrigger>
+          </TabsList>
 
-              <TabsContent value="groups" className="space-y-4 mt-6">
-                <div className="flex items-center justify-end gap-2">
-                  <Select
-                    value={groupFilter}
-                    onValueChange={(v: any) => setGroupFilter(v)}
-                  >
-                    <SelectTrigger className="w-[180px] h-10">
-                      <Filter className="mr-2 h-4 w-4" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="men">Men Only</SelectItem>
-                      <SelectItem value="women">Women Only</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button onClick={() => setIsAddGroupModalOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Group
-                  </Button>
+          <TabsContent value="groups" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Service Groups</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={groupFilter}
+                      onValueChange={(v: any) => setGroupFilter(v)}
+                    >
+                      <SelectTrigger className="w-[180px] h-10">
+                        <Filter className="mr-2 h-4 w-4" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        <SelectItem value="men">Men Only</SelectItem>
+                        <SelectItem value="women">Women Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={() => setIsAddGroupModalOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Group
+                    </Button>
+                  </div>
                 </div>
+              </CardHeader>
+              <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -608,30 +626,43 @@ export default function SettingsPage() {
                     )}
                   </TableBody>
                 </Table>
-              </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <TabsContent value="services" className="space-y-4 mt-6">
-                <div className="flex items-center justify-end gap-2">
-                  <Select
-                    value={serviceFilter}
-                    onValueChange={(v: any) => setServiceFilter(v)}
-                  >
-                    <SelectTrigger className="w-[195px] h-10">
-                      <Filter className="mr-2 h-4 w-4" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Prices</SelectItem>
-                      <SelectItem value="low">Budget (&lt;₹500)</SelectItem>
-                      <SelectItem value="medium">Medium (₹500-999)</SelectItem>
-                      <SelectItem value="high">Premium (₹1K+)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button onClick={() => setIsAddModalOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Service
-                  </Button>
+          <TabsContent value="services" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Services</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={serviceFilter}
+                      onValueChange={(v: any) => setServiceFilter(v)}
+                    >
+                      <SelectTrigger className="w-[195px] h-10">
+                        <Filter className="mr-2 h-4 w-4" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Prices</SelectItem>
+                        <SelectItem value="low">Budget (&lt;₹500)</SelectItem>
+                        <SelectItem value="medium">
+                          Medium (₹500-999)
+                        </SelectItem>
+                        <SelectItem value="high">Premium (₹1K+)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={() => setIsAddModalOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Service
+                    </Button>
+                  </div>
                 </div>
+              </CardHeader>
+              <CardContent>
                 <Tabs defaultValue="all" className="w-full">
                   <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="all">All Services</TabsTrigger>
@@ -648,10 +679,17 @@ export default function SettingsPage() {
                     <ServiceTable services={filteredWomenServices} />
                   </TabsContent>
                 </Tabs>
-              </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <TabsContent value="stylists" className="space-y-4 mt-6">
-                <div className="flex items-center justify-end gap-2">
+          <TabsContent value="stylists" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                <div>
+                  <CardTitle>Stylists</CardTitle>
+                </div>
+                <div className="flex items-center gap-2">
                   <Select
                     value={stylistFilter}
                     onValueChange={(v: any) => setStylistFilter(v)}
@@ -671,6 +709,8 @@ export default function SettingsPage() {
                     Add Stylist
                   </Button>
                 </div>
+              </CardHeader>
+              <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -732,10 +772,10 @@ export default function SettingsPage() {
                     )}
                   </TableBody>
                 </Table>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
