@@ -2,60 +2,67 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppointments } from "@/hooks/use-appointments";
-import {
-  endOfMonth,
-  isToday,
-  isWithinInterval,
-  startOfMonth,
-  subDays,
-  subMonths,
-} from "date-fns";
+import { endOfMonth, format, startOfMonth, subDays, subMonths } from "date-fns";
 import { Calendar, DollarSign, Users } from "lucide-react";
 import { useMemo } from "react";
 
+type DateRange = { from?: Date; to?: Date };
+
 export function DashboardStats({
   dateFilter = "today",
+  customDateRange,
 }: {
   dateFilter?: "all" | "today" | "7days" | "thisMonth" | "lastMonth";
+  customDateRange?: DateRange;
 }) {
   const { appointments } = useAppointments();
 
   const stats = useMemo(() => {
     const now = new Date();
+    const today = format(now, "yyyy-MM-dd");
 
     let filtered = appointments;
-    switch (dateFilter) {
-      case "today":
-        filtered = appointments.filter((apt) => isToday(new Date(apt.date)));
-        break;
-      case "7days":
-        filtered = appointments.filter((apt) =>
-          isWithinInterval(new Date(apt.date), {
-            start: subDays(now, 7),
-            end: now,
-          }),
-        );
-        break;
-      case "thisMonth":
-        filtered = appointments.filter((apt) =>
-          isWithinInterval(new Date(apt.date), {
-            start: startOfMonth(now),
-            end: endOfMonth(now),
-          }),
-        );
-        break;
-      case "lastMonth": {
-        const lastMonth = subMonths(now, 1);
-        filtered = appointments.filter((apt) =>
-          isWithinInterval(new Date(apt.date), {
-            start: startOfMonth(lastMonth),
-            end: endOfMonth(lastMonth),
-          }),
-        );
-        break;
+
+    if (customDateRange?.from) {
+      const fromStr = format(customDateRange.from, "yyyy-MM-dd");
+      const toStr = customDateRange.to
+        ? format(customDateRange.to, "yyyy-MM-dd")
+        : fromStr;
+      filtered = appointments.filter(
+        (apt) => apt.date >= fromStr && apt.date <= toStr,
+      );
+    } else {
+      switch (dateFilter) {
+        case "today":
+          filtered = appointments.filter((apt) => apt.date === today);
+          break;
+        case "7days": {
+          const sevenDaysAgo = format(subDays(now, 7), "yyyy-MM-dd");
+          filtered = appointments.filter(
+            (apt) => apt.date >= sevenDaysAgo && apt.date <= today,
+          );
+          break;
+        }
+        case "thisMonth": {
+          const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
+          const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
+          filtered = appointments.filter(
+            (apt) => apt.date >= monthStart && apt.date <= monthEnd,
+          );
+          break;
+        }
+        case "lastMonth": {
+          const lastMonth = subMonths(now, 1);
+          const monthStart = format(startOfMonth(lastMonth), "yyyy-MM-dd");
+          const monthEnd = format(endOfMonth(lastMonth), "yyyy-MM-dd");
+          filtered = appointments.filter(
+            (apt) => apt.date >= monthStart && apt.date <= monthEnd,
+          );
+          break;
+        }
+        default:
+          filtered = appointments;
       }
-      default:
-        filtered = appointments;
     }
 
     const appointmentsCount = filtered.length;
@@ -72,7 +79,7 @@ export function DashboardStats({
       revenue,
       totalClients,
     };
-  }, [appointments, dateFilter]);
+  }, [appointments, dateFilter, customDateRange]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -82,6 +89,9 @@ export function DashboardStats({
   };
 
   const getFilterLabel = () => {
+    if (customDateRange?.from) {
+      return "Custom Range";
+    }
     switch (dateFilter) {
       case "today":
         return "Today's";
@@ -97,6 +107,12 @@ export function DashboardStats({
   };
 
   const getFilterDescription = () => {
+    if (customDateRange?.from) {
+      if (customDateRange.to) {
+        return `${format(customDateRange.from, "MMM dd")} - ${format(customDateRange.to, "MMM dd, yyyy")}`;
+      }
+      return format(customDateRange.from, "MMM dd, yyyy");
+    }
     switch (dateFilter) {
       case "today":
         return "Recorded for today";

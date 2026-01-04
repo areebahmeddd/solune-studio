@@ -43,11 +43,11 @@ export default function InventoryPage() {
         </div>
 
         <Card className="border-dashed">
-          <CardHeader>
+          <CardHeader className="space-y-4 py-12">
             <div className="flex items-center justify-center">
               <Package className="h-12 w-12 text-muted-foreground" />
             </div>
-            <CardTitle className="text-center">Coming Soon</CardTitle>
+            <CardTitle className="text-center text-2xl">Coming Soon</CardTitle>
           </CardHeader>
         </Card>
       </div>

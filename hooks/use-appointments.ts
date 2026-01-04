@@ -17,6 +17,7 @@ import { toast } from "sonner";
 export interface ServiceItem {
   name: string;
   price: number;
+  stylist?: string;
 }
 
 export interface Appointment {

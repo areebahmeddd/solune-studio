@@ -164,27 +164,71 @@ export default function PromotionsPage() {
     setIsWhatsAppModalOpen(true);
   };
 
-  const confirmSendMessage = () => {
+  const confirmSendMessage = async () => {
     if (!customMessage) {
       toast.error("Please enter a message");
       return;
     }
 
-    if (isBulkSend) {
-      toast.success(
-        `WhatsApp message would be sent to ${selectedClients.size} client(s)`,
-      );
-      setSelectedClients(new Set());
-    } else {
-      toast.success(
-        `WhatsApp message would be sent to ${selectedClient.name} at ${selectedClient.phone}`,
-      );
-    }
+    const recipients = isBulkSend
+      ? Array.from(selectedClients)
+          .map((phone) => {
+            const client = clientsData.find((c) => c.phone === phone);
+            return client
+              ? { phone: client.phone, message: customMessage }
+              : null;
+          })
+          .filter(Boolean)
+      : [{ phone: selectedClient.phone, message: customMessage }];
 
-    setIsWhatsAppModalOpen(false);
-    setSelectedClient(null);
-    setIsBulkSend(false);
-    setCustomMessage("");
+    try {
+      const loadingToast = toast.loading(
+        `Sending message${recipients.length > 1 ? "s" : ""}...`,
+      );
+
+      const response = await fetch("/api/whatsapp/send-message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipients,
+        }),
+      });
+
+      const data = await response.json();
+
+      toast.dismiss(loadingToast);
+
+      if (!response.ok || !data.success) {
+        toast.error(data.error || "Failed to send messages");
+        return;
+      }
+
+      if (data.summary) {
+        const { succeeded, failed, total } = data.summary;
+        if (failed === 0) {
+          toast.success(
+            `Successfully sent ${succeeded} message${succeeded > 1 ? "s" : ""}!`,
+          );
+        } else {
+          toast.warning(
+            `Sent ${succeeded}/${total} messages. ${failed} failed.`,
+          );
+        }
+      } else {
+        toast.success("Message sent successfully!");
+      }
+
+      setSelectedClients(new Set());
+      setIsWhatsAppModalOpen(false);
+      setSelectedClient(null);
+      setIsBulkSend(false);
+      setCustomMessage("");
+    } catch (error) {
+      console.error("Error sending WhatsApp message:", error);
+      toast.error("Failed to send message. Please try again.");
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -476,12 +520,8 @@ export default function PromotionsPage() {
                 placeholder="Type your message..."
                 value={customMessage}
                 onChange={(e) => setCustomMessage(e.target.value)}
-                className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               />
-            </div>
-            <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-700 border border-blue-200">
-              Note: This is a placeholder feature. No actual WhatsApp messages
-              will be sent.
             </div>
           </div>
           <DialogFooter>

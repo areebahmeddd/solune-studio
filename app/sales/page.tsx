@@ -21,6 +21,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+type DateRange = { from?: Date; to?: Date };
+
 export default function AppointmentsPage() {
   useEffect(() => {
     document.title = "Solune Studio - Appointments";
@@ -37,6 +39,9 @@ export default function AppointmentsPage() {
   const [dateFilter, setDateFilter] = useState<
     "all" | "today" | "7days" | "thisMonth" | "lastMonth"
   >("today");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(
+    undefined,
+  );
 
   const handleEdit = (appointment: any) => {
     setEditingAppointment(appointment);
@@ -161,10 +166,15 @@ export default function AppointmentsPage() {
           </div>
         </div>
 
-        <DashboardStats dateFilter={dateFilter} />
+        <DashboardStats
+          dateFilter={dateFilter}
+          customDateRange={customDateRange}
+        />
         <AppointmentsList
           dateFilter={dateFilter}
           onFilterChange={setDateFilter}
+          customDateRange={customDateRange}
+          onCustomDateRangeChange={setCustomDateRange}
           onEdit={handleEdit}
           onDelete={handleDelete}
         />

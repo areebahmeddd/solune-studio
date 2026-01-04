@@ -43,7 +43,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useExpenses } from "@/hooks/use-expenses";
 import { cn } from "@/lib/utils";
-import { format, isWithinInterval, subDays } from "date-fns";
+import { format, subDays } from "date-fns";
 import {
   CalendarIcon,
   Download,
@@ -166,42 +166,28 @@ export default function ExpensesPage() {
 
   const filteredExpenses = useMemo(() => {
     const now = new Date();
+    const today = format(now, "yyyy-MM-dd");
 
     if (customDateRange?.from) {
-      return expenses.filter((exp) => {
-        const expDate = new Date(exp.date);
-        if (customDateRange.to && customDateRange.from) {
-          return isWithinInterval(expDate, {
-            start: customDateRange.from,
-            end: customDateRange.to,
-          });
-        }
-        if (customDateRange.from) {
-          return expDate.toDateString() === customDateRange.from.toDateString();
-        }
-        return true;
-      });
+      const fromStr = format(customDateRange.from, "yyyy-MM-dd");
+      const toStr = customDateRange.to
+        ? format(customDateRange.to, "yyyy-MM-dd")
+        : fromStr;
+      return expenses.filter((exp) => exp.date >= fromStr && exp.date <= toStr);
     }
 
     switch (dateFilter) {
       case "today":
-        const today = format(now, "yyyy-MM-dd");
         return expenses.filter((exp) => exp.date === today);
       case "7days":
-        const sevenDaysAgo = subDays(now, 7);
-        return expenses.filter((exp) =>
-          isWithinInterval(new Date(exp.date), {
-            start: sevenDaysAgo,
-            end: now,
-          }),
+        const sevenDaysAgo = format(subDays(now, 7), "yyyy-MM-dd");
+        return expenses.filter(
+          (exp) => exp.date >= sevenDaysAgo && exp.date <= today,
         );
       case "30days":
-        const thirtyDaysAgo = subDays(now, 30);
-        return expenses.filter((exp) =>
-          isWithinInterval(new Date(exp.date), {
-            start: thirtyDaysAgo,
-            end: now,
-          }),
+        const thirtyDaysAgo = format(subDays(now, 30), "yyyy-MM-dd");
+        return expenses.filter(
+          (exp) => exp.date >= thirtyDaysAgo && exp.date <= today,
         );
       default:
         return expenses;

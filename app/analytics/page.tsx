@@ -21,7 +21,6 @@ import { cn } from "@/lib/utils";
 import {
   endOfMonth,
   format,
-  isWithinInterval,
   startOfMonth,
   subDays,
   subMonths,
@@ -81,16 +80,11 @@ export default function AnalyticsPage() {
     const today = format(now, "yyyy-MM-dd");
 
     if (filterType === "custom" && date?.from) {
-      return appointments.filter((apt) => {
-        const aptDate = new Date(apt.date);
-        if (date.to && date.from) {
-          return isWithinInterval(aptDate, { start: date.from, end: date.to });
-        }
-        if (date.from) {
-          return aptDate.toDateString() === date.from.toDateString();
-        }
-        return true;
-      });
+      const fromStr = format(date.from, "yyyy-MM-dd");
+      const toStr = date.to ? format(date.to, "yyyy-MM-dd") : fromStr;
+      return appointments.filter(
+        (apt) => apt.date >= fromStr && apt.date <= toStr,
+      );
     }
 
     switch (filterType) {
@@ -137,25 +131,27 @@ export default function AnalyticsPage() {
       return acc + (a.amount - discountAmount);
     }, 0);
 
-    let monthlyCollection = 0;
-    let monthlyLabel = format(now, "MMMM yyyy");
+    let monthlyCollection = salesTotal;
+    let monthlyLabel = "";
 
     if (filterType === "custom" && date?.from) {
-      monthlyCollection = salesTotal;
       if (date.to && date.from) {
         monthlyLabel = `${format(date.from, "MMM dd, yyyy")} - ${format(date.to, "MMM dd, yyyy")}`;
       } else {
         monthlyLabel = format(date.from, "MMM dd, yyyy");
       }
+    } else if (filterType === "today") {
+      monthlyLabel = "Today";
+    } else if (filterType === "7days") {
+      monthlyLabel = "Last 7 Days";
+    } else if (filterType === "30days") {
+      monthlyLabel = "Last 30 Days";
+    } else if (filterType === "3months") {
+      monthlyLabel = "Last 3 Months";
+    } else if (filterType === "year") {
+      monthlyLabel = "Last Year";
     } else {
-      const monthlyAppointments = appointments.filter((a) => {
-        const date = new Date(a.date);
-        return date >= monthStart && date <= monthEnd;
-      });
-      monthlyCollection = monthlyAppointments.reduce((acc, a) => {
-        const discountAmount = (a.amount * a.discount) / 100;
-        return acc + (a.amount - discountAmount);
-      }, 0);
+      monthlyLabel = "All Time";
     }
 
     const cashApts = dataSource.filter((a) => a.paymentMethod === "Cash");
@@ -227,6 +223,79 @@ export default function AnalyticsPage() {
       { name: "Card", value: stats.cardRevenue },
     ].filter((item) => item.value > 0);
   }, [stats]);
+
+  const stylistPerformance = useMemo(() => {
+    const stylistData: Record<
+      string,
+      {
+        revenue: number;
+        appointments: number;
+        services: Record<string, number>;
+      }
+    > = {};
+
+    filteredAppointments.forEach((apt) => {
+      const discountAmount = (apt.amount * apt.discount) / 100;
+      const finalAmount = apt.amount - discountAmount;
+
+      if (apt.services && apt.services.length > 0) {
+        apt.services.forEach((service: any) => {
+          const stylistName = service.stylist || apt.stylist || "No stylist";
+
+          if (!stylistData[stylistName]) {
+            stylistData[stylistName] = {
+              revenue: 0,
+              appointments: 0,
+              services: {},
+            };
+          }
+          const serviceRevenue = finalAmount / apt.services.length;
+          stylistData[stylistName].revenue += serviceRevenue;
+          stylistData[stylistName].services[service.name] =
+            (stylistData[stylistName].services[service.name] || 0) + 1;
+        });
+        const uniqueStylists = new Set(
+          apt.services.map(
+            (s: any) => s.stylist || apt.stylist || "No stylist",
+          ),
+        );
+        uniqueStylists.forEach((stylist) => {
+          if (stylistData[stylist as string]) {
+            stylistData[stylist as string].appointments +=
+              1 / uniqueStylists.size;
+          }
+        });
+      } else if (apt.stylist) {
+        const stylistName = apt.stylist;
+        if (!stylistData[stylistName]) {
+          stylistData[stylistName] = {
+            revenue: 0,
+            appointments: 0,
+            services: {},
+          };
+        }
+        stylistData[stylistName].revenue += finalAmount;
+        stylistData[stylistName].appointments += 1;
+      }
+    });
+
+    return Object.entries(stylistData)
+      .map(([name, data]) => ({
+        name,
+        revenue: data.revenue,
+        appointments: Math.round(data.appointments),
+        services: data.services,
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .filter((s) => s.name !== "No stylist");
+  }, [filteredAppointments]);
+
+  const stylistRevenueData = useMemo(() => {
+    return stylistPerformance.map((s) => ({
+      name: s.name,
+      value: s.revenue,
+    }));
+  }, [stylistPerformance]);
 
   const COLORS = [
     "#8b5cf6",
@@ -520,6 +589,102 @@ export default function AnalyticsPage() {
               <p className="text-xs text-muted-foreground">
                 {stats.cardCount} transactions
               </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Stylist Performance</CardTitle>
+              <CardDescription>
+                Revenue generated by each stylist
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              {stylistRevenueData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={stylistRevenueData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {stylistRevenueData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number | undefined) =>
+                        value !== undefined ? formatCurrency(value) : ""
+                      }
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                  No stylist data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Stylist Details</CardTitle>
+              <CardDescription>Appointments and top services</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px] overflow-auto">
+              {stylistPerformance.length > 0 ? (
+                <div className="space-y-4">
+                  {stylistPerformance.map((stylist, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-lg border p-3 space-y-2"
+                      style={{
+                        borderColor: COLORS[idx % COLORS.length],
+                        borderWidth: 2,
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold">{stylist.name}</h4>
+                        <span className="text-sm font-medium text-green-600">
+                          {formatCurrency(stylist.revenue)}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {stylist.appointments} appointment
+                        {stylist.appointments !== 1 ? "s" : ""}
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(stylist.services)
+                          .sort(([, a], [, b]) => b - a)
+                          .slice(0, 3)
+                          .map(([service, count], serviceIdx) => (
+                            <span
+                              key={serviceIdx}
+                              className="text-xs bg-secondary px-2 py-1 rounded"
+                            >
+                              {service} ({count})
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                  No stylist data available
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

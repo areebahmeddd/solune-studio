@@ -33,15 +33,7 @@ import {
 } from "@/components/ui/table";
 import { useAppointments } from "@/hooks/use-appointments";
 import { cn } from "@/lib/utils";
-import {
-  endOfMonth,
-  format,
-  isToday,
-  isWithinInterval,
-  startOfMonth,
-  subDays,
-  subMonths,
-} from "date-fns";
+import { endOfMonth, format, startOfMonth, subDays, subMonths } from "date-fns";
 import { CalendarIcon, Edit, Filter, Search, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -54,6 +46,8 @@ interface AppointmentsListProps {
   onFilterChange?: (
     value: "all" | "today" | "7days" | "thisMonth" | "lastMonth",
   ) => void;
+  customDateRange?: DateRange;
+  onCustomDateRangeChange?: (range: DateRange | undefined) => void;
 }
 
 export function AppointmentsList({
@@ -61,15 +55,17 @@ export function AppointmentsList({
   onDelete,
   dateFilter,
   onFilterChange,
+  customDateRange: externalCustomDateRange,
+  onCustomDateRangeChange,
 }: AppointmentsListProps = {}) {
   const { appointments } = useAppointments();
   const [search, setSearch] = useState("");
   const [localDateFilter, setLocalDateFilter] = useState<
     "all" | "today" | "7days" | "thisMonth" | "lastMonth"
   >(dateFilter ?? "today");
-  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(
-    undefined,
-  );
+  const [localCustomDateRange, setLocalCustomDateRange] = useState<
+    DateRange | undefined
+  >(undefined);
 
   useEffect(() => {
     if (dateFilter !== undefined) {
@@ -78,50 +74,55 @@ export function AppointmentsList({
   }, [dateFilter]);
 
   const effectiveDateFilter = dateFilter ?? localDateFilter;
+  const customDateRange =
+    externalCustomDateRange !== undefined
+      ? externalCustomDateRange
+      : localCustomDateRange;
+
+  const setCustomDateRange = (range: DateRange | undefined) => {
+    if (onCustomDateRangeChange) {
+      onCustomDateRangeChange(range);
+    } else {
+      setLocalCustomDateRange(range);
+    }
+  };
 
   const getFilteredByDate = () => {
     const now = new Date();
+    const today = format(now, "yyyy-MM-dd");
 
     if (customDateRange?.from) {
-      return appointments.filter((apt) => {
-        const aptDate = new Date(apt.date);
-        if (customDateRange.to && customDateRange.from) {
-          return isWithinInterval(aptDate, {
-            start: customDateRange.from,
-            end: customDateRange.to,
-          });
-        }
-        if (customDateRange.from) {
-          return aptDate.toDateString() === customDateRange.from.toDateString();
-        }
-        return true;
-      });
+      const fromStr = format(customDateRange.from, "yyyy-MM-dd");
+      const toStr = customDateRange.to
+        ? format(customDateRange.to, "yyyy-MM-dd")
+        : fromStr;
+      return appointments.filter(
+        (apt) => apt.date >= fromStr && apt.date <= toStr,
+      );
     }
 
     switch (effectiveDateFilter) {
       case "today":
-        return appointments.filter((apt) => isToday(new Date(apt.date)));
-      case "7days":
-        return appointments.filter((apt) =>
-          isWithinInterval(new Date(apt.date), {
-            start: subDays(now, 7),
-            end: now,
-          }),
+        return appointments.filter((apt) => apt.date === today);
+      case "7days": {
+        const sevenDaysAgo = format(subDays(now, 7), "yyyy-MM-dd");
+        return appointments.filter(
+          (apt) => apt.date >= sevenDaysAgo && apt.date <= today,
         );
-      case "thisMonth":
-        return appointments.filter((apt) =>
-          isWithinInterval(new Date(apt.date), {
-            start: startOfMonth(now),
-            end: endOfMonth(now),
-          }),
+      }
+      case "thisMonth": {
+        const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
+        const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
+        return appointments.filter(
+          (apt) => apt.date >= monthStart && apt.date <= monthEnd,
         );
+      }
       case "lastMonth": {
         const lastMonth = subMonths(now, 1);
-        return appointments.filter((apt) =>
-          isWithinInterval(new Date(apt.date), {
-            start: startOfMonth(lastMonth),
-            end: endOfMonth(lastMonth),
-          }),
+        const monthStart = format(startOfMonth(lastMonth), "yyyy-MM-dd");
+        const monthEnd = format(endOfMonth(lastMonth), "yyyy-MM-dd");
+        return appointments.filter(
+          (apt) => apt.date >= monthStart && apt.date <= monthEnd,
         );
       }
       default:
@@ -299,7 +300,24 @@ export function AppointmentsList({
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {appointment.stylist}
+                      {(() => {
+                        if (
+                          appointment.services &&
+                          appointment.services.length > 0
+                        ) {
+                          const stylists = Array.from(
+                            new Set(
+                              appointment.services
+                                .map((s: any) => s.stylist)
+                                .filter(Boolean),
+                            ),
+                          );
+                          if (stylists.length > 0) {
+                            return stylists.join(", ");
+                          }
+                        }
+                        return appointment.stylist || "No stylist";
+                      })()}
                     </TableCell>
                     <TableCell>
                       <Badge
