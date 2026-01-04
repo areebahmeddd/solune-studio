@@ -58,13 +58,11 @@ export function AppointmentForm({
     a.name.localeCompare(b.name),
   );
 
-  // Group services by their groups
   const groupedServices = serviceGroups.map((group) => ({
     group,
     services: sortedServices.filter((s) => s.groupId === group.id),
   }));
 
-  // Services without a group (ungrouped)
   const ungroupedServices = sortedServices.filter((s) => !s.groupId);
 
   const [formData, setFormData] = useState({
@@ -82,18 +80,43 @@ export function AppointmentForm({
     null,
   );
   const [editingPrice, setEditingPrice] = useState("");
+  const [editingStylistIndex, setEditingStylistIndex] = useState<number | null>(
+    null,
+  );
+  const [editingStylist, setEditingStylist] = useState("");
 
   const handleAddService = () => {
     if (!selectedService) {
       toast.error("Please select a service");
       return;
     }
-    const service = sortedServices.find((s) => s.name === selectedService);
+    const service = sortedServices.find((s) => s.id === selectedService);
     if (!service) return;
+
+    let matchingGenderStylist;
+
+    if (service.category === "both") {
+      matchingGenderStylist = sortedStylists[0];
+    } else {
+      matchingGenderStylist = sortedStylists.find(
+        (s) =>
+          (service.category === "men" && s.gender === "male") ||
+          (service.category === "women" && s.gender === "female"),
+      );
+    }
+
+    const selectedStylist = matchingGenderStylist
+      ? matchingGenderStylist.name
+      : "";
 
     const newServices = [
       ...formData.services,
-      { name: service.name, price: service.price },
+      {
+        name: service.name,
+        price: service.price,
+        stylist: selectedStylist,
+        category: service.category,
+      },
     ];
     const newAmount = newServices.reduce((sum, s) => sum + s.price, 0);
 
@@ -101,6 +124,7 @@ export function AppointmentForm({
       ...formData,
       services: newServices,
       amount: newAmount,
+      stylist: selectedStylist,
     });
     setSelectedService("");
   };
@@ -124,6 +148,28 @@ export function AppointmentForm({
   const handleEditService = (index: number) => {
     setEditingServiceIndex(index);
     setEditingPrice(formData.services[index].price.toString());
+  };
+
+  const handleEditStylist = (index: number) => {
+    setEditingStylistIndex(index);
+    setEditingStylist(formData.services[index].stylist || "");
+  };
+
+  const handleSaveStylist = (index: number) => {
+    if (!editingStylist) {
+      toast.error("Please select a stylist");
+      return;
+    }
+
+    const newServices = [...formData.services];
+    newServices[index] = { ...newServices[index], stylist: editingStylist };
+
+    setFormData({
+      ...formData,
+      services: newServices,
+    });
+    setEditingStylistIndex(null);
+    setEditingStylist("");
   };
 
   const handleSaveEditedPrice = (index: number) => {
@@ -157,8 +203,11 @@ export function AppointmentForm({
       return;
     }
 
-    if (!formData.stylist) {
-      toast.error("Please select a stylist");
+    const servicesWithoutStylist = formData.services.filter(
+      (s: any) => !s.stylist,
+    );
+    if (servicesWithoutStylist.length > 0) {
+      toast.error("Please ensure all services have a stylist assigned");
       return;
     }
 
@@ -284,83 +333,55 @@ export function AppointmentForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="service" className="text-sm">
-                Add Service
-              </Label>
-              <div className="flex gap-2">
-                <Select
-                  value={selectedService}
-                  onValueChange={setSelectedService}
-                >
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Select service" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {groupedServices.map(
-                      ({ group, services: groupServices }) =>
-                        groupServices.length > 0 ? (
-                          <div key={group.id}>
-                            <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
-                              {group.name}
-                            </div>
-                            {groupServices.map((s) => (
-                              <SelectItem
-                                key={s.id}
-                                value={s.name}
-                                className="pl-6"
-                              >
-                                {s.name}
-                              </SelectItem>
-                            ))}
-                          </div>
-                        ) : null,
-                    )}
-                    {ungroupedServices.length > 0 && (
-                      <>
-                        {groupedServices.some(
-                          ({ services: gs }) => gs.length > 0,
-                        ) && <div className="h-px bg-border my-1" />}
-                        {ungroupedServices.map((s) => (
-                          <SelectItem key={s.id} value={s.name}>
+          <div className="space-y-2">
+            <Label htmlFor="service" className="text-sm">
+              Add Service
+            </Label>
+            <div className="flex gap-2">
+              <Select
+                value={selectedService}
+                onValueChange={setSelectedService}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Select service" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {groupedServices.map(({ group, services: groupServices }) =>
+                    groupServices.length > 0 ? (
+                      <div key={group.id}>
+                        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                          {group.name}
+                        </div>
+                        {groupServices.map((s) => (
+                          <SelectItem key={s.id} value={s.id} className="pl-6">
                             {s.name}
                           </SelectItem>
                         ))}
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  size="icon"
-                  className="h-10 w-10 shrink-0"
-                  onClick={handleAddService}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stylist" className="text-sm">
-                Stylist
-              </Label>
-              <Select
-                value={formData.stylist}
-                onValueChange={(v) => setFormData({ ...formData, stylist: v })}
-                required
-              >
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Select stylist" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sortedStylists.map((s) => (
-                    <SelectItem key={s.id} value={s.name}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
+                      </div>
+                    ) : null,
+                  )}
+                  {ungroupedServices.length > 0 && (
+                    <>
+                      {groupedServices.some(
+                        ({ services: gs }) => gs.length > 0,
+                      ) && <div className="h-px bg-border my-1" />}
+                      {ungroupedServices.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
+              <Button
+                type="button"
+                size="icon"
+                className="h-10 w-10 shrink-0"
+                onClick={handleAddService}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
@@ -375,48 +396,111 @@ export function AppointmentForm({
                   >
                     <div className="flex items-center gap-3 flex-1">
                       <div className="flex-1">
-                        <p className="text-sm font-medium">{service.name}</p>
-                        {editingServiceIndex === index ? (
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-muted-foreground">
-                              ₹
-                            </span>
-                            <Input
-                              type="number"
-                              value={editingPrice}
-                              onChange={(e) => setEditingPrice(e.target.value)}
-                              className="h-7 w-24 text-xs"
-                              autoFocus
-                            />
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="default"
-                              className="h-7 text-xs"
-                              onClick={() => handleSaveEditedPrice(index)}
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">{service.name}</p>
+                          {service.category && (
+                            <span
+                              className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset capitalize ${
+                                service.category === "women"
+                                  ? "bg-pink-50 text-pink-700 ring-pink-700/10"
+                                  : service.category === "men"
+                                    ? "bg-blue-50 text-blue-700 ring-blue-700/10"
+                                    : "bg-purple-50 text-purple-700 ring-purple-700/10"
+                              }`}
                             >
-                              Save
-                            </Button>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">
-                            ₹{service.price}
-                          </p>
-                        )}
+                              {service.category === "both"
+                                ? "all"
+                                : service.category}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1">
+                          {editingServiceIndex === index ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                ₹
+                              </span>
+                              <Input
+                                type="number"
+                                value={editingPrice}
+                                onChange={(e) =>
+                                  setEditingPrice(e.target.value)
+                                }
+                                className="h-7 w-24 text-xs"
+                                autoFocus
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="default"
+                                className="h-7 text-xs"
+                                onClick={() => handleSaveEditedPrice(index)}
+                              >
+                                Save
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              ₹{service.price}
+                            </span>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            •
+                          </span>
+                          {editingStylistIndex === index ? (
+                            <div className="flex items-center gap-2">
+                              <Select
+                                value={editingStylist}
+                                onValueChange={setEditingStylist}
+                              >
+                                <SelectTrigger className="h-7 w-32 text-xs">
+                                  <SelectValue placeholder="Select stylist" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {sortedStylists.map((s) => (
+                                    <SelectItem key={s.id} value={s.name}>
+                                      {s.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="default"
+                                className="h-7 text-xs"
+                                onClick={() => handleSaveStylist(index)}
+                              >
+                                Save
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              {service.stylist ||
+                                formData.stylist ||
+                                "No stylist"}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      {editingServiceIndex !== index && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleEditService(index)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
+                      {editingServiceIndex !== index &&
+                        editingStylistIndex !== index && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              handleEditService(index);
+                              handleEditStylist(index);
+                            }}
+                            title="Edit service"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
                       <Button
                         type="button"
                         variant="ghost"

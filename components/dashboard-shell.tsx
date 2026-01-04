@@ -11,6 +11,7 @@ import {
   ChevronRight,
   LogOut,
   Megaphone,
+  Package,
   Receipt,
   Settings,
   Wallet,
@@ -57,6 +58,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const navItems = [
     { label: "Sales", icon: Receipt, href: "/sales" },
     { label: "Expenses", icon: Wallet, href: "/expenses" },
+    { label: "Inventory", icon: Package, href: "/inventory" },
     { label: "Promotions", icon: Megaphone, href: "/promotions" },
     { label: "Analytics", icon: BarChart3, href: "/analytics" },
     { label: "Settings", icon: Settings, href: "/settings" },

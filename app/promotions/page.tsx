@@ -38,36 +38,10 @@ import {
 import { useAppointments } from "@/hooks/use-appointments";
 import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
-import { Filter, MessageCircle, Search } from "lucide-react";
+import { Download, Filter, MessageCircle, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-
-const MESSAGE_TEMPLATES = [
-  {
-    id: "welcome",
-    name: "Welcome Offer",
-    message:
-      "Welcome to our salon! Enjoy 20% off on your next visit. Book now!",
-  },
-  {
-    id: "birthday",
-    name: "Birthday Wishes",
-    message:
-      "Happy Birthday! 🎉 Get 30% off on all services today. Treat yourself!",
-  },
-  {
-    id: "reminder",
-    name: "Appointment Reminder",
-    message:
-      "It's been a while! Come visit us and get 15% off on your next service.",
-  },
-  {
-    id: "custom",
-    name: "Custom Message",
-    message: "",
-  },
-];
 
 export default function PromotionsPage() {
   useEffect(() => {
@@ -88,7 +62,6 @@ export default function PromotionsPage() {
     new Set(),
   );
   const [isBulkSend, setIsBulkSend] = useState(false);
-  const [messageTemplate, setMessageTemplate] = useState("welcome");
   const [customMessage, setCustomMessage] = useState("");
 
   useEffect(() => {
@@ -192,11 +165,7 @@ export default function PromotionsPage() {
   };
 
   const confirmSendMessage = () => {
-    const template = MESSAGE_TEMPLATES.find((t) => t.id === messageTemplate);
-    const message =
-      messageTemplate === "custom" ? customMessage : template?.message;
-
-    if (!message) {
+    if (!customMessage) {
       toast.error("Please enter a message");
       return;
     }
@@ -215,7 +184,6 @@ export default function PromotionsPage() {
     setIsWhatsAppModalOpen(false);
     setSelectedClient(null);
     setIsBulkSend(false);
-    setMessageTemplate("welcome");
     setCustomMessage("");
   };
 
@@ -226,6 +194,46 @@ export default function PromotionsPage() {
     }).format(amount);
   };
 
+  const exportToCSV = () => {
+    if (filteredClients.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    const headers = [
+      "Client Name",
+      "Phone Number",
+      "Total Visits",
+      "Total Spend",
+    ];
+
+    const csvData = filteredClients.map((client) => [
+      client.name,
+      client.phone,
+      client.visits,
+      client.totalSpent.toFixed(2),
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...csvData.map((row) => row.join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `client-promotions-${format(new Date(), "dd-MM-yyyy")}.csv`,
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Client data exported successfully");
+  };
+
   if (loading || !user) {
     return null;
   }
@@ -233,11 +241,21 @@ export default function PromotionsPage() {
   return (
     <DashboardShell>
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Promotions</h1>
-          <p className="text-muted-foreground">
-            Manage client communications and promotional messages
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Promotions</h1>
+            <p className="text-muted-foreground">
+              Manage client communications and promotional messages
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={exportToCSV}
+            disabled={filteredClients.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -452,40 +470,14 @@ export default function PromotionsPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="template">Message Template</Label>
-              <Select
-                value={messageTemplate}
-                onValueChange={setMessageTemplate}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MESSAGE_TEMPLATES.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="message">Message Preview</Label>
-              {messageTemplate === "custom" ? (
-                <Input
-                  id="message"
-                  placeholder="Type your custom message..."
-                  value={customMessage}
-                  onChange={(e) => setCustomMessage(e.target.value)}
-                />
-              ) : (
-                <div className="rounded-md border p-3 text-sm bg-muted">
-                  {
-                    MESSAGE_TEMPLATES.find((t) => t.id === messageTemplate)
-                      ?.message
-                  }
-                </div>
-              )}
+              <Label htmlFor="message">Message</Label>
+              <textarea
+                id="message"
+                placeholder="Type your message..."
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value)}
+                className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
             </div>
             <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-700 border border-blue-200">
               Note: This is a placeholder feature. No actual WhatsApp messages

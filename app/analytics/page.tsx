@@ -205,7 +205,19 @@ export default function AnalyticsPage() {
         });
       }
     });
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+
+    const sorted = Object.entries(counts)
+      .sort(([, a], [, b]) => b - a)
+      .map(([name, value]) => ({ name, value }));
+
+    if (sorted.length <= 10) {
+      return sorted;
+    }
+
+    const top10 = sorted.slice(0, 10);
+    const others = sorted.slice(10).reduce((sum, item) => sum + item.value, 0);
+
+    return [...top10, { name: "Others", value: others }];
   }, [filteredAppointments]);
 
   const paymentDistribution = useMemo(() => {
@@ -528,9 +540,6 @@ export default function AnalyticsPage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(2)}%`
-                    }
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
@@ -543,6 +552,7 @@ export default function AnalyticsPage() {
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
@@ -573,7 +583,9 @@ export default function AnalyticsPage() {
                     <Cell fill="#3b82f6" />
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
+                    formatter={(value: number | undefined) =>
+                      value !== undefined ? formatCurrency(value) : ""
+                    }
                   />
                   <Legend />
                 </PieChart>

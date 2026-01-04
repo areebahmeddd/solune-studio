@@ -82,7 +82,7 @@ export default function SettingsPage() {
 
   const [formData, setFormData] = useState({
     name: "",
-    category: "men" as "men" | "women",
+    category: "both" as "men" | "women" | "both",
     price: 0,
     groupId: "",
   });
@@ -100,6 +100,9 @@ export default function SettingsPage() {
 
   const [serviceFilter, setServiceFilter] = useState<
     "all" | "low" | "medium" | "high"
+  >("all");
+  const [groupFilter, setGroupFilter] = useState<
+    "all" | "men" | "women" | "both"
   >("all");
   const [stylistFilter, setStylistFilter] = useState<"all" | "male" | "female">(
     "all",
@@ -120,7 +123,7 @@ export default function SettingsPage() {
   const resetForm = () => {
     setFormData({
       name: "",
-      category: "men",
+      category: "both",
       price: 0,
       groupId: "",
     });
@@ -345,6 +348,13 @@ export default function SettingsPage() {
   const filteredMenServices = filterServicesByPrice(menServices);
   const filteredWomenServices = filterServicesByPrice(womenServices);
 
+  const filteredServiceGroups =
+    groupFilter === "all"
+      ? [...serviceGroups].sort((a, b) => a.order - b.order)
+      : [...serviceGroups]
+          .filter((g) => g.category === groupFilter || g.category === "both")
+          .sort((a, b) => a.order - b.order);
+
   const filteredStylists =
     stylistFilter === "all"
       ? [...stylists].sort((a, b) => a.name.localeCompare(b.name))
@@ -493,228 +503,237 @@ export default function SettingsPage() {
         </div>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Service Groups</CardTitle>
-              <CardDescription>
-                Create groups to organize your services (Hair Spa, Hair
-                Treatment, etc.)
-              </CardDescription>
-            </div>
-            <Button onClick={() => setIsAddGroupModalOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Group
-            </Button>
+          <CardHeader>
+            <CardTitle>Settings Management</CardTitle>
+            <CardDescription>
+              Manage your service groups, services, and stylists
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">#</TableHead>
-                  <TableHead>Group Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="w-24 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {serviceGroups.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
-                      No service groups available
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  serviceGroups.map((group, index) => (
-                    <TableRow key={group.id}>
-                      <TableCell className="font-medium">{index + 1}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Folder className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{group.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset capitalize ${
-                            group.category === "both"
-                              ? "bg-purple-50 text-purple-700 ring-purple-700/10"
-                              : group.category === "women"
-                                ? "bg-pink-50 text-pink-700 ring-pink-700/10"
-                                : "bg-blue-50 text-blue-700 ring-blue-700/10"
-                          }`}
-                        >
-                          {group.category === "both"
-                            ? "All"
-                            : group.category === "men"
-                              ? "Men"
-                              : "Women"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEditGroup(group)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleDeleteGroup(group)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Service Management</CardTitle>
-              <CardDescription>
-                Organize services by category and manage pricing
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Select
-                value={serviceFilter}
-                onValueChange={(v: any) => setServiceFilter(v)}
-              >
-                <SelectTrigger className="w-[195px] h-10">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Prices</SelectItem>
-                  <SelectItem value="low">Budget (&lt;₹500)</SelectItem>
-                  <SelectItem value="medium">Medium (₹500-999)</SelectItem>
-                  <SelectItem value="high">Premium (₹1K+)</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={() => setIsAddModalOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Service
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="all" className="w-full">
+            <Tabs defaultValue="groups" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="all">All Services</TabsTrigger>
-                <TabsTrigger value="men">Men's Services</TabsTrigger>
-                <TabsTrigger value="women">Women's Services</TabsTrigger>
+                <TabsTrigger value="groups">Service Groups</TabsTrigger>
+                <TabsTrigger value="services">Services</TabsTrigger>
+                <TabsTrigger value="stylists">Stylists</TabsTrigger>
               </TabsList>
-              <TabsContent value="all" className="space-y-4">
-                <ServiceTable services={sortedServices} />
+
+              <TabsContent value="groups" className="space-y-4 mt-6">
+                <div className="flex items-center justify-end gap-2">
+                  <Select
+                    value={groupFilter}
+                    onValueChange={(v: any) => setGroupFilter(v)}
+                  >
+                    <SelectTrigger className="w-[180px] h-10">
+                      <Filter className="mr-2 h-4 w-4" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="men">Men Only</SelectItem>
+                      <SelectItem value="women">Women Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={() => setIsAddGroupModalOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Group
+                  </Button>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">#</TableHead>
+                      <TableHead>Group Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="w-24 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredServiceGroups.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center">
+                          No service groups available
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredServiceGroups.map((group, index) => (
+                        <TableRow key={group.id}>
+                          <TableCell className="font-medium">
+                            {index + 1}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Folder className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">{group.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset capitalize ${
+                                group.category === "both"
+                                  ? "bg-purple-50 text-purple-700 ring-purple-700/10"
+                                  : group.category === "women"
+                                    ? "bg-pink-50 text-pink-700 ring-pink-700/10"
+                                    : "bg-blue-50 text-blue-700 ring-blue-700/10"
+                              }`}
+                            >
+                              {group.category === "both"
+                                ? "All"
+                                : group.category === "men"
+                                  ? "Men"
+                                  : "Women"}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleEditGroup(group)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleDeleteGroup(group)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </TabsContent>
-              <TabsContent value="men" className="space-y-4">
-                <ServiceTable services={filteredMenServices} />
+
+              <TabsContent value="services" className="space-y-4 mt-6">
+                <div className="flex items-center justify-end gap-2">
+                  <Select
+                    value={serviceFilter}
+                    onValueChange={(v: any) => setServiceFilter(v)}
+                  >
+                    <SelectTrigger className="w-[195px] h-10">
+                      <Filter className="mr-2 h-4 w-4" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Prices</SelectItem>
+                      <SelectItem value="low">Budget (&lt;₹500)</SelectItem>
+                      <SelectItem value="medium">Medium (₹500-999)</SelectItem>
+                      <SelectItem value="high">Premium (₹1K+)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={() => setIsAddModalOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Service
+                  </Button>
+                </div>
+                <Tabs defaultValue="all" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="all">All Services</TabsTrigger>
+                    <TabsTrigger value="men">Men's Services</TabsTrigger>
+                    <TabsTrigger value="women">Women's Services</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="all" className="space-y-4">
+                    <ServiceTable services={sortedServices} />
+                  </TabsContent>
+                  <TabsContent value="men" className="space-y-4">
+                    <ServiceTable services={filteredMenServices} />
+                  </TabsContent>
+                  <TabsContent value="women" className="space-y-4">
+                    <ServiceTable services={filteredWomenServices} />
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
-              <TabsContent value="women" className="space-y-4">
-                <ServiceTable services={filteredWomenServices} />
+
+              <TabsContent value="stylists" className="space-y-4 mt-6">
+                <div className="flex items-center justify-end gap-2">
+                  <Select
+                    value={stylistFilter}
+                    onValueChange={(v: any) => setStylistFilter(v)}
+                  >
+                    <SelectTrigger className="w-[165px] h-10">
+                      <Filter className="mr-2 h-4 w-4" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Stylists</SelectItem>
+                      <SelectItem value="male">Male Stylists</SelectItem>
+                      <SelectItem value="female">Female Stylists</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={() => setIsAddStylistModalOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Stylist
+                  </Button>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">#</TableHead>
+                      <TableHead>Stylist Name</TableHead>
+                      <TableHead>Gender</TableHead>
+                      <TableHead className="w-24 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStylists.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center">
+                          No stylists available
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredStylists.map((stylist, index) => (
+                        <TableRow key={stylist.id}>
+                          <TableCell className="font-medium">
+                            {index + 1}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {stylist.name}
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset capitalize ${
+                                stylist.gender === "female"
+                                  ? "bg-pink-50 text-pink-700 ring-pink-700/10"
+                                  : "bg-blue-50 text-blue-700 ring-blue-700/10"
+                              }`}
+                            >
+                              {stylist.gender}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleEditStylist(stylist)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleDeleteStylist(stylist)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </TabsContent>
             </Tabs>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Stylist Management</CardTitle>
-              <CardDescription>Manage your salon's stylists</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Select
-                value={stylistFilter}
-                onValueChange={(v: any) => setStylistFilter(v)}
-              >
-                <SelectTrigger className="w-[165px] h-10">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Stylists</SelectItem>
-                  <SelectItem value="male">Male Stylists</SelectItem>
-                  <SelectItem value="female">Female Stylists</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={() => setIsAddStylistModalOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Stylist
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">#</TableHead>
-                  <TableHead>Stylist Name</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead className="w-24 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStylists.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
-                      No stylists available
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredStylists.map((stylist, index) => (
-                    <TableRow key={stylist.id}>
-                      <TableCell className="font-medium">{index + 1}</TableCell>
-                      <TableCell className="font-medium">
-                        {stylist.name}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset capitalize ${
-                            stylist.gender === "female"
-                              ? "bg-pink-50 text-pink-700 ring-pink-700/10"
-                              : "bg-blue-50 text-blue-700 ring-blue-700/10"
-                          }`}
-                        >
-                          {stylist.gender}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEditStylist(stylist)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleDeleteStylist(stylist)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
           </CardContent>
         </Card>
       </div>
@@ -770,7 +789,7 @@ export default function SettingsPage() {
                 onValueChange={(v) =>
                   setFormData({
                     ...formData,
-                    category: v as "men" | "women",
+                    category: v as "men" | "women" | "both",
                   })
                 }
               >
@@ -778,6 +797,7 @@ export default function SettingsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="both">All Services</SelectItem>
                   <SelectItem value="men">Men's Services</SelectItem>
                   <SelectItem value="women">Women's Services</SelectItem>
                 </SelectContent>
@@ -856,7 +876,7 @@ export default function SettingsPage() {
                 onValueChange={(v) =>
                   setFormData({
                     ...formData,
-                    category: v as "men" | "women",
+                    category: v as "men" | "women" | "both",
                   })
                 }
               >
@@ -864,6 +884,7 @@ export default function SettingsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="both">All Services</SelectItem>
                   <SelectItem value="men">Men's Services</SelectItem>
                   <SelectItem value="women">Women's Services</SelectItem>
                 </SelectContent>

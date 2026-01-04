@@ -2,14 +2,21 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppointments } from "@/hooks/use-appointments";
-import { isToday, isWithinInterval, subDays } from "date-fns";
-import { Calendar, DollarSign, TrendingUp, Users } from "lucide-react";
+import {
+  endOfMonth,
+  isToday,
+  isWithinInterval,
+  startOfMonth,
+  subDays,
+  subMonths,
+} from "date-fns";
+import { Calendar, DollarSign, Users } from "lucide-react";
 import { useMemo } from "react";
 
 export function DashboardStats({
   dateFilter = "today",
 }: {
-  dateFilter?: "all" | "today" | "7days" | "30days";
+  dateFilter?: "all" | "today" | "7days" | "thisMonth" | "lastMonth";
 }) {
   const { appointments } = useAppointments();
 
@@ -29,14 +36,24 @@ export function DashboardStats({
           }),
         );
         break;
-      case "30days":
+      case "thisMonth":
         filtered = appointments.filter((apt) =>
           isWithinInterval(new Date(apt.date), {
-            start: subDays(now, 30),
-            end: now,
+            start: startOfMonth(now),
+            end: endOfMonth(now),
           }),
         );
         break;
+      case "lastMonth": {
+        const lastMonth = subMonths(now, 1);
+        filtered = appointments.filter((apt) =>
+          isWithinInterval(new Date(apt.date), {
+            start: startOfMonth(lastMonth),
+            end: endOfMonth(lastMonth),
+          }),
+        );
+        break;
+      }
       default:
         filtered = appointments;
     }
@@ -50,32 +67,12 @@ export function DashboardStats({
 
     const totalClients = new Set(filtered.map((apt) => apt.phone)).size;
 
-    const lastMonth = new Date();
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
-    const lastMonthStr = lastMonth.toISOString().split("T")[0].substring(0, 7);
-    const thisMonthStr = new Date().toISOString().split("T")[0].substring(0, 7);
-
-    const thisMonthAppointments = appointments.filter((apt) =>
-      apt.date.startsWith(thisMonthStr),
-    );
-    const lastMonthAppointments = appointments.filter((apt) =>
-      apt.date.startsWith(lastMonthStr),
-    );
-
-    const growth =
-      lastMonthAppointments.length > 0
-        ? ((thisMonthAppointments.length - lastMonthAppointments.length) /
-            lastMonthAppointments.length) *
-          100
-        : 0;
-
     return {
       appointmentsCount,
       revenue,
       totalClients,
-      growth: growth.toFixed(2),
     };
-  }, [appointments]);
+  }, [appointments, dateFilter]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -84,31 +81,49 @@ export function DashboardStats({
     }).format(amount);
   };
 
+  const getFilterLabel = () => {
+    switch (dateFilter) {
+      case "today":
+        return "Today's";
+      case "7days":
+        return "Last 7 Days";
+      case "thisMonth":
+        return "This Month";
+      case "lastMonth":
+        return "Last Month";
+      default:
+        return "Total";
+    }
+  };
+
+  const getFilterDescription = () => {
+    switch (dateFilter) {
+      case "today":
+        return "Recorded for today";
+      case "7days":
+        return "Sales in last 7 days";
+      case "thisMonth":
+        return "Sales this calendar month";
+      case "lastMonth":
+        return "Sales last calendar month";
+      default:
+        return "All time sales";
+    }
+  };
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-3">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            {dateFilter === "today"
-              ? "Today's Sales"
-              : dateFilter === "7days"
-                ? "Last 7 Days Sales"
-                : dateFilter === "30days"
-                  ? "Last 30 Days Sales"
-                  : "Total Sales"}
+            {getFilterLabel()} Sales
           </CardTitle>
           <Calendar className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.appointmentsCount}</div>
           <p className="text-xs text-muted-foreground mt-1">
-            {dateFilter === "today"
-              ? "Recorded for today"
-              : dateFilter === "7days"
-                ? "Sales in last 7 days"
-                : dateFilter === "30days"
-                  ? "Sales in last 30 days"
-                  : "All time sales"}
+            {getFilterDescription()}
           </p>
         </CardContent>
       </Card>
@@ -116,13 +131,7 @@ export function DashboardStats({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            {dateFilter === "today"
-              ? "Today's Revenue"
-              : dateFilter === "7days"
-                ? "Last 7 Days Revenue"
-                : dateFilter === "30days"
-                  ? "Last 30 Days Revenue"
-                  : "Total Revenue"}
+            {getFilterLabel()} Revenue
           </CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
@@ -137,13 +146,7 @@ export function DashboardStats({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            {dateFilter === "today"
-              ? "Today's Clients"
-              : dateFilter === "7days"
-                ? "Clients (Last 7 Days)"
-                : dateFilter === "30days"
-                  ? "Clients (Last 30 Days)"
-                  : "Total Clients"}
+            {getFilterLabel()} Clients
           </CardTitle>
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
@@ -151,24 +154,6 @@ export function DashboardStats({
           <div className="text-2xl font-bold">{stats.totalClients}</div>
           <p className="text-xs text-muted-foreground mt-1">
             Unique phone numbers
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Monthly Growth
-          </CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {parseFloat(stats.growth) > 0 ? "+" : ""}
-            {stats.growth}%
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Compared to last month
           </p>
         </CardContent>
       </Card>

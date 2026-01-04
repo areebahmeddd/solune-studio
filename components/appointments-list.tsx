@@ -33,7 +33,15 @@ import {
 } from "@/components/ui/table";
 import { useAppointments } from "@/hooks/use-appointments";
 import { cn } from "@/lib/utils";
-import { format, isToday, isWithinInterval, subDays } from "date-fns";
+import {
+  endOfMonth,
+  format,
+  isToday,
+  isWithinInterval,
+  startOfMonth,
+  subDays,
+  subMonths,
+} from "date-fns";
 import { CalendarIcon, Edit, Filter, Search, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -42,8 +50,10 @@ type DateRange = { from?: Date; to?: Date };
 interface AppointmentsListProps {
   onEdit?: (appointment: any) => void;
   onDelete?: (appointment: any) => void;
-  dateFilter?: "all" | "today" | "7days" | "30days";
-  onFilterChange?: (value: "all" | "today" | "7days" | "30days") => void;
+  dateFilter?: "all" | "today" | "7days" | "thisMonth" | "lastMonth";
+  onFilterChange?: (
+    value: "all" | "today" | "7days" | "thisMonth" | "lastMonth",
+  ) => void;
 }
 
 export function AppointmentsList({
@@ -55,8 +65,8 @@ export function AppointmentsList({
   const { appointments } = useAppointments();
   const [search, setSearch] = useState("");
   const [localDateFilter, setLocalDateFilter] = useState<
-    "all" | "today" | "7days" | "30days"
-  >(dateFilter ?? "all");
+    "all" | "today" | "7days" | "thisMonth" | "lastMonth"
+  >(dateFilter ?? "today");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(
     undefined,
   );
@@ -98,13 +108,22 @@ export function AppointmentsList({
             end: now,
           }),
         );
-      case "30days":
+      case "thisMonth":
         return appointments.filter((apt) =>
           isWithinInterval(new Date(apt.date), {
-            start: subDays(now, 30),
-            end: now,
+            start: startOfMonth(now),
+            end: endOfMonth(now),
           }),
         );
+      case "lastMonth": {
+        const lastMonth = subMonths(now, 1);
+        return appointments.filter((apt) =>
+          isWithinInterval(new Date(apt.date), {
+            start: startOfMonth(lastMonth),
+            end: endOfMonth(lastMonth),
+          }),
+        );
+      }
       default:
         return appointments;
     }
@@ -112,15 +131,19 @@ export function AppointmentsList({
 
   const dateFilteredAppointments = getFilteredByDate();
 
-  const filteredAppointments = dateFilteredAppointments.filter(
-    (app) =>
-      app.name.toLowerCase().includes(search.toLowerCase()) ||
-      (app.services &&
-        app.services.some((s: any) =>
-          s.name.toLowerCase().includes(search.toLowerCase()),
-        )) ||
-      app.stylist.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filteredAppointments = dateFilteredAppointments
+    .filter(
+      (app) =>
+        app.name.toLowerCase().includes(search.toLowerCase()) ||
+        (app.services &&
+          app.services.some((s: any) =>
+            s.name.toLowerCase().includes(search.toLowerCase()),
+          )) ||
+        app.stylist.toLowerCase().includes(search.toLowerCase()),
+    )
+    .sort((a, b) => {
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -205,7 +228,8 @@ export function AppointmentsList({
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="today">Today</SelectItem>
                 <SelectItem value="7days">Last 7 Days</SelectItem>
-                <SelectItem value="30days">Last 30 Days</SelectItem>
+                <SelectItem value="thisMonth">This Month</SelectItem>
+                <SelectItem value="lastMonth">Last Month</SelectItem>
               </SelectContent>
             </Select>
             <div className="relative w-72">

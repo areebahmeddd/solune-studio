@@ -35,7 +35,7 @@ export default function AppointmentsPage() {
   const [editingAppointment, setEditingAppointment] = useState<any>(null);
   const [deletingAppointment, setDeletingAppointment] = useState<any>(null);
   const [dateFilter, setDateFilter] = useState<
-    "all" | "today" | "7days" | "30days"
+    "all" | "today" | "7days" | "thisMonth" | "lastMonth"
   >("today");
 
   const handleEdit = (appointment: any) => {

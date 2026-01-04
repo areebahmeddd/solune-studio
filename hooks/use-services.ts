@@ -16,7 +16,7 @@ import { toast } from "sonner";
 export interface Service {
   id: string;
   name: string;
-  category: "men" | "women";
+  category: "men" | "women" | "both";
   price: number;
   groupId?: string;
 }
