@@ -6,7 +6,7 @@
 export interface WhatsAppConfig {
   phoneNumberId: string;
   accessToken: string;
-  apiVersion?: string;
+  apiVersion: string;
 }
 
 export interface SendMessageParams {
@@ -18,6 +18,8 @@ export interface WhatsAppResponse {
   success: boolean;
   messageId?: string;
   error?: string;
+  errorCode?: number;
+  errorType?: string;
 }
 
 /**
@@ -41,8 +43,7 @@ export async function sendWhatsAppMessage(
   config: WhatsAppConfig,
   params: SendMessageParams,
 ): Promise<WhatsAppResponse> {
-  const apiVersion = config.apiVersion || "v18.0";
-  const url = `https://graph.facebook.com/${apiVersion}/${config.phoneNumberId}/messages`;
+  const url = `https://graph.facebook.com/${config.apiVersion}/${config.phoneNumberId}/messages`;
 
   const formattedPhone = formatPhoneNumber(params.to);
 
@@ -50,6 +51,8 @@ export async function sendWhatsAppMessage(
     return {
       success: false,
       error: "Invalid phone number format",
+      errorCode: 400,
+      errorType: "INVALID_PARAMETER",
     };
   }
 
@@ -77,9 +80,15 @@ export async function sendWhatsAppMessage(
     const data = await response.json();
 
     if (!response.ok) {
+      const errorMessage = data.error?.message || "Failed to send message";
+      const errorCode = data.error?.code || response.status;
+      const errorType = data.error?.type || "API_ERROR";
+
       return {
         success: false,
-        error: data.error?.message || "Failed to send message",
+        error: errorMessage,
+        errorCode,
+        errorType,
       };
     }
 
@@ -91,32 +100,71 @@ export async function sendWhatsAppMessage(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error occurred",
+      errorCode: 500,
+      errorType: "NETWORK_ERROR",
     };
   }
 }
 
 /**
- * Send messages to multiple recipients with rate limiting
+ * Send messages to multiple recipients with rate limiting and retry logic
+ * WhatsApp recommends 80-100 messages per second maximum
  */
 export async function sendBulkWhatsAppMessages(
   config: WhatsAppConfig,
   recipients: Array<{ phone: string; message: string }>,
   delayBetweenMessages: number = 1000,
-): Promise<Array<{ phone: string; success: boolean; error?: string }>> {
-  const results: Array<{ phone: string; success: boolean; error?: string }> =
-    [];
+): Promise<
+  Array<{
+    phone: string;
+    success: boolean;
+    error?: string;
+    messageId?: string;
+    retried?: boolean;
+  }>
+> {
+  const results: Array<{
+    phone: string;
+    success: boolean;
+    error?: string;
+    messageId?: string;
+    retried?: boolean;
+  }> = [];
 
   for (const recipient of recipients) {
-    const result = await sendWhatsAppMessage(config, {
+    let result = await sendWhatsAppMessage(config, {
       to: recipient.phone,
       message: recipient.message,
     });
 
-    results.push({
-      phone: recipient.phone,
-      success: result.success,
-      error: result.error,
-    });
+    if (
+      !result.success &&
+      result.errorCode &&
+      [429, 500, 503].includes(result.errorCode)
+    ) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, delayBetweenMessages * 2),
+      );
+      result = await sendWhatsAppMessage(config, {
+        to: recipient.phone,
+        message: recipient.message,
+      });
+
+      results.push({
+        phone: recipient.phone,
+        success: result.success,
+        error: result.error,
+        messageId: result.messageId,
+        retried: true,
+      });
+    } else {
+      results.push({
+        phone: recipient.phone,
+        success: result.success,
+        error: result.error,
+        messageId: result.messageId,
+      });
+    }
 
     if (recipients.indexOf(recipient) < recipients.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, delayBetweenMessages));

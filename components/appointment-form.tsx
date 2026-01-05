@@ -116,6 +116,7 @@ export function AppointmentForm({
         price: service.price,
         stylist: selectedStylist,
         category: service.category,
+        groupId: service.groupId,
       },
     ];
     const newAmount = newServices.reduce((sum, s) => sum + s.price, 0);
@@ -267,8 +268,35 @@ export function AppointmentForm({
     }
   };
 
-  const finalAmount =
-    formData.amount - (formData.amount * formData.discount) / 100;
+  const NON_DISCOUNTABLE_GROUPS = ["nails", "threading"];
+
+  const hasNonDiscountableService = formData.services.some((service: any) => {
+    if (!service.groupId) return false;
+    const group = serviceGroups.find((g) => g.id === service.groupId);
+    return (
+      group && NON_DISCOUNTABLE_GROUPS.includes(group.name.toLowerCase().trim())
+    );
+  });
+
+  const discountableAmount = formData.services.reduce(
+    (sum: number, service: any) => {
+      if (!service.groupId) return sum + service.price;
+      const group = serviceGroups.find((g) => g.id === service.groupId);
+      if (
+        group &&
+        NON_DISCOUNTABLE_GROUPS.includes(group.name.toLowerCase().trim())
+      ) {
+        return sum;
+      }
+      return sum + service.price;
+    },
+    0,
+  );
+
+  const nonDiscountableAmount = formData.amount - discountableAmount;
+
+  const discountAmount = (discountableAmount * formData.discount) / 100;
+  const finalAmount = formData.amount - discountAmount;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -610,6 +638,11 @@ export function AppointmentForm({
             <div className="space-y-2">
               <Label htmlFor="discount" className="text-sm">
                 Discount (%)
+                {hasNonDiscountableService && (
+                  <span className="text-xs text-muted-foreground ml-1">
+                    (Not applied to Nails/Threading)
+                  </span>
+                )}
               </Label>
               <Input
                 id="discount"
@@ -622,7 +655,13 @@ export function AppointmentForm({
                 min="0"
                 max="100"
                 className="h-10"
+                disabled={discountableAmount === 0}
               />
+              {discountableAmount === 0 && formData.services.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No discount available for selected services
+                </p>
+              )}
             </div>
           </div>
 
@@ -630,6 +669,23 @@ export function AppointmentForm({
 
           <Card className="bg-muted/50 border-dashed">
             <CardContent className="pt-6">
+              {hasNonDiscountableService && formData.discount > 0 && (
+                <div className="space-y-2 mb-4 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Discountable services</span>
+                    <span>₹{discountableAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Non-discountable (Nails/Threading)</span>
+                    <span>₹{nonDiscountableAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Discount ({formData.discount}%)</span>
+                    <span>-₹{discountAmount.toFixed(2)}</span>
+                  </div>
+                  <Separator className="my-2" />
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-lg font-semibold">Final Amount</span>
                 <span className="text-2xl font-bold">

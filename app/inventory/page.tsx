@@ -188,13 +188,15 @@ export default function InventoryPage() {
   };
 
   const handleAddProduct = async () => {
-    if (!productForm.name || !productForm.expiryDate) {
-      toast.error("Please fill all required fields");
+    if (!productForm.name) {
+      toast.error("Please enter product name");
       return;
     }
     await addProduct({
       name: productForm.name,
-      expiryDate: format(productForm.expiryDate, "yyyy-MM-dd"),
+      expiryDate: productForm.expiryDate
+        ? format(productForm.expiryDate, "yyyy-MM-dd")
+        : "",
     });
     setIsAddProductOpen(false);
     resetProductForm();
@@ -211,13 +213,15 @@ export default function InventoryPage() {
 
   const handleUpdateProduct = async () => {
     if (!editingProduct) return;
-    if (!productForm.name || !productForm.expiryDate) {
-      toast.error("Please fill all required fields");
+    if (!productForm.name) {
+      toast.error("Please enter product name");
       return;
     }
     await updateProduct(editingProduct.id, {
       name: productForm.name,
-      expiryDate: format(productForm.expiryDate, "yyyy-MM-dd"),
+      expiryDate: productForm.expiryDate
+        ? format(productForm.expiryDate, "yyyy-MM-dd")
+        : "",
     });
     setIsEditProductOpen(false);
     setEditingProduct(null);

@@ -799,7 +799,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="group">Service Group (Optional)</Label>
+              <Label htmlFor="group">Service Group</Label>
               <Select
                 value={formData.groupId || "unassigned"}
                 onValueChange={(v) =>
@@ -886,7 +886,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-group">Service Group (Optional)</Label>
+              <Label htmlFor="edit-group">Service Group</Label>
               <Select
                 value={formData.groupId || "unassigned"}
                 onValueChange={(v) =>

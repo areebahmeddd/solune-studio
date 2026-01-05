@@ -5,8 +5,9 @@ export async function POST(req: NextRequest) {
   try {
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
     const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+    const apiVersion = process.env.WHATSAPP_API_VERSION;
 
-    if (!phoneNumberId || !accessToken) {
+    if (!phoneNumberId || !accessToken || !apiVersion) {
       return NextResponse.json(
         {
           success: false,
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
       {
         phoneNumberId,
         accessToken,
-        apiVersion: process.env.WHATSAPP_API_VERSION || "v18.0",
+        apiVersion,
       },
       recipients,
       1000,
