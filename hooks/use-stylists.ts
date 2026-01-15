@@ -20,7 +20,6 @@ export interface Stylist {
 
 export const useStylists = () => {
   const [stylists, setStylists] = useState<Stylist[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const q = query(collection(db, "stylists"));
@@ -31,7 +30,6 @@ export const useStylists = () => {
         data.push({ id: doc.id, ...doc.data() } as Stylist);
       });
       setStylists(data);
-      setLoading(false);
     });
 
     return () => unsubscribe();

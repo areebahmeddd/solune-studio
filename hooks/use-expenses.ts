@@ -14,17 +14,19 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+export type ExpenseType = "daily" | "fixed";
+
 export interface Expense {
   id: string;
   item: string;
   amount: number;
   date: string;
   timestamp: string;
+  expenseType: ExpenseType;
 }
 
 export const useExpenses = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const q = query(collection(db, "expenses"), orderBy("timestamp", "desc"));
@@ -35,7 +37,6 @@ export const useExpenses = () => {
         data.push({ id: doc.id, ...doc.data() } as Expense);
       });
       setExpenses(data);
-      setLoading(false);
     });
 
     return () => unsubscribe();

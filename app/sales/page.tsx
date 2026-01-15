@@ -16,7 +16,7 @@ import {
 import { useAppointments } from "@/hooks/use-appointments";
 import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
-import { Download, Loader2, Plus } from "lucide-react";
+import { Download, Loader2, Lock, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -28,7 +28,7 @@ export default function AppointmentsPage() {
     document.title = "Solune Studio - Appointments";
   }, []);
 
-  const { user, loading } = useAuth();
+  const { user, loading, permissions } = useAuth();
   const router = useRouter();
   const { appointments, deleteAppointment } = useAppointments();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -158,18 +158,29 @@ export default function AppointmentsPage() {
             <h1 className="text-3xl font-bold tracking-tight">Appointments</h1>
             <p className="text-muted-foreground">
               Manage your salon appointments
+              {!permissions.canEdit && (
+                <span className="ml-2 inline-flex items-center text-xs">
+                  <Lock className="h-3 w-3 mr-1" />
+                  View only
+                </span>
+              )}
             </p>
           </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
               onClick={exportToCSV}
-              disabled={filteredAppointments.length === 0}
+              disabled={
+                filteredAppointments.length === 0 || !permissions.canEdit
+              }
             >
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>
-            <Button onClick={() => setIsAddModalOpen(true)}>
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              disabled={!permissions.canEdit}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add Appointment
             </Button>
@@ -185,8 +196,8 @@ export default function AppointmentsPage() {
           onFilterChange={setDateFilter}
           customDateRange={customDateRange}
           onCustomDateRangeChange={setCustomDateRange}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
+          onEdit={permissions.canEdit ? handleEdit : undefined}
+          onDelete={permissions.canEdit ? handleDelete : undefined}
           onFilteredDataChange={setFilteredAppointments}
         />
       </div>

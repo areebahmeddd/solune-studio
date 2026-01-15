@@ -55,7 +55,7 @@ export default function AnalyticsPage() {
     document.title = "Solune Studio - Analytics";
   }, []);
 
-  const { user, loading } = useAuth();
+  const { user, loading, permissions } = useAuth();
   const router = useRouter();
   const { appointments } = useAppointments();
   const [date, setDate] = useState<DateRange | undefined>(undefined);

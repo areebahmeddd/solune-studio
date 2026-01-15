@@ -35,7 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/use-auth";
-import { useExpenses } from "@/hooks/use-expenses";
+import { useExpenses, type ExpenseType } from "@/hooks/use-expenses";
 import { cn } from "@/lib/utils";
 import { format, subDays } from "date-fns";
 import {
@@ -45,6 +45,7 @@ import {
   Edit,
   Filter,
   Loader2,
+  Lock,
   Plus,
   ShoppingBag,
   Trash2,
@@ -62,7 +63,7 @@ export default function ExpensesPage() {
     document.title = "Solune Studio - Expenses";
   }, []);
 
-  const { user, loading } = useAuth();
+  const { user, loading, userRole, permissions } = useAuth();
   const router = useRouter();
   const { expenses, addExpense, updateExpense, deleteExpense } = useExpenses();
 
@@ -84,17 +85,19 @@ export default function ExpensesPage() {
     item: "",
     amount: 0,
     date: new Date(),
+    expenseType: "daily" as ExpenseType,
   });
 
   const [originalFormData, setOriginalFormData] = useState({
     item: "",
     amount: 0,
     date: new Date(),
+    expenseType: "daily" as ExpenseType,
   });
 
-  const [items, setItems] = useState<Array<{ item: string; amount: number }>>([
-    { item: "", amount: 0 },
-  ]);
+  const [items, setItems] = useState<
+    Array<{ item: string; amount: number; expenseType: ExpenseType }>
+  >([{ item: "", amount: 0, expenseType: "daily" }]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -113,8 +116,9 @@ export default function ExpensesPage() {
       item: "",
       amount: 0,
       date: new Date(),
+      expenseType: "daily",
     });
-    setItems([{ item: "", amount: 0 }]);
+    setItems([{ item: "", amount: 0, expenseType: "daily" }]);
   };
 
   const handleAdd = async () => {
@@ -139,6 +143,7 @@ export default function ExpensesPage() {
           amount: item.amount,
           date: dateStr,
           timestamp,
+          expenseType: item.expenseType,
         });
       }
 
@@ -160,6 +165,7 @@ export default function ExpensesPage() {
       item: expense.item,
       amount: expense.amount,
       date: new Date(expense.date),
+      expenseType: expense.expenseType || "daily",
     };
     setFormData(data);
     setOriginalFormData(data);
@@ -167,7 +173,7 @@ export default function ExpensesPage() {
   };
 
   const addItem = () => {
-    setItems([...items, { item: "", amount: 0 }]);
+    setItems([...items, { item: "", amount: 0, expenseType: "daily" }]);
   };
 
   const removeItem = (index: number) => {
@@ -188,14 +194,15 @@ export default function ExpensesPage() {
     return (
       formData.item !== originalFormData.item ||
       formData.amount !== originalFormData.amount ||
-      formData.date.getTime() !== originalFormData.date.getTime()
+      formData.date.getTime() !== originalFormData.date.getTime() ||
+      formData.expenseType !== originalFormData.expenseType
     );
   }, [formData, originalFormData]);
 
   const updateItem = (
     index: number,
-    field: "item" | "amount",
-    value: string | number,
+    field: "item" | "amount" | "expenseType",
+    value: string | number | ExpenseType,
   ) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
@@ -213,6 +220,7 @@ export default function ExpensesPage() {
       amount: formData.amount,
       date: format(formData.date, "yyyy-MM-dd"),
       timestamp: editingExpense.timestamp,
+      expenseType: formData.expenseType,
     });
 
     setIsEditModalOpen(false);
@@ -246,20 +254,27 @@ export default function ExpensesPage() {
     const now = new Date();
     const today = format(now, "yyyy-MM-dd");
 
+    let expensesToFilter = expenses;
+    if (!permissions.canViewFixedExpenses) {
+      expensesToFilter = expenses.filter((exp) => exp.expenseType !== "fixed");
+    }
+
     if (customDateRange?.from) {
       const fromStr = format(customDateRange.from, "yyyy-MM-dd");
       const toStr = customDateRange.to
         ? format(customDateRange.to, "yyyy-MM-dd")
         : fromStr;
-      return expenses.filter((exp) => exp.date >= fromStr && exp.date <= toStr);
+      return expensesToFilter.filter(
+        (exp) => exp.date >= fromStr && exp.date <= toStr,
+      );
     }
 
     switch (dateFilter) {
       case "today":
-        return expenses.filter((exp) => exp.date === today);
+        return expensesToFilter.filter((exp) => exp.date === today);
       case "7days":
         const sevenDaysAgo = format(subDays(now, 7), "yyyy-MM-dd");
-        return expenses.filter(
+        return expensesToFilter.filter(
           (exp) => exp.date >= sevenDaysAgo && exp.date <= today,
         );
       case "thisMonth":
@@ -267,7 +282,7 @@ export default function ExpensesPage() {
         const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         const thisMonthStartStr = format(thisMonthStart, "yyyy-MM-dd");
         const thisMonthEndStr = format(thisMonthEnd, "yyyy-MM-dd");
-        return expenses.filter(
+        return expensesToFilter.filter(
           (exp) => exp.date >= thisMonthStartStr && exp.date <= thisMonthEndStr,
         );
       case "lastMonth":
@@ -279,13 +294,13 @@ export default function ExpensesPage() {
         const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
         const lastMonthStartStr = format(lastMonthStart, "yyyy-MM-dd");
         const lastMonthEndStr = format(lastMonthEnd, "yyyy-MM-dd");
-        return expenses.filter(
+        return expensesToFilter.filter(
           (exp) => exp.date >= lastMonthStartStr && exp.date <= lastMonthEndStr,
         );
       default:
-        return expenses;
+        return expensesToFilter;
     }
-  }, [expenses, dateFilter, customDateRange]);
+  }, [expenses, dateFilter, customDateRange, permissions.canViewFixedExpenses]);
 
   const totalExpenses = filteredExpenses.reduce(
     (sum, exp) => sum + exp.amount,
@@ -347,18 +362,27 @@ export default function ExpensesPage() {
             <h1 className="text-3xl font-bold tracking-tight">Expenses</h1>
             <p className="text-muted-foreground">
               Track and manage your business expenses
+              {!permissions.canViewFixedExpenses && (
+                <span className="ml-2 inline-flex items-center text-xs">
+                  <Lock className="h-3 w-3 mr-1" />
+                  Daily expenses only
+                </span>
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               onClick={exportToCSV}
-              disabled={filteredExpenses.length === 0}
+              disabled={filteredExpenses.length === 0 || !permissions.canEdit}
             >
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>
-            <Button onClick={() => setIsAddModalOpen(true)}>
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              disabled={!permissions.canEdit}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add Expense
             </Button>
@@ -491,16 +515,22 @@ export default function ExpensesPage() {
                   <TableHead className="w-12">#</TableHead>
                   <TableHead className="w-[150px]">Date</TableHead>
                   <TableHead className="w-auto">Item</TableHead>
+                  <TableHead className="w-[120px]">Type</TableHead>
                   <TableHead className="w-[150px] text-right">Amount</TableHead>
-                  <TableHead className="w-[100px] text-right">
-                    Actions
-                  </TableHead>
+                  {permissions.canEdit && (
+                    <TableHead className="w-[100px] text-right">
+                      Actions
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredExpenses.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell
+                      colSpan={permissions.canEdit ? 6 : 5}
+                      className="h-24 text-center"
+                    >
                       No expenses found
                     </TableCell>
                   </TableRow>
@@ -514,29 +544,46 @@ export default function ExpensesPage() {
                       <TableCell className="font-medium">
                         {expense.item}
                       </TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            "inline-flex items-center px-2 py-1 rounded-md text-xs font-medium",
+                            expense.expenseType === "fixed"
+                              ? "bg-purple-500/10 text-purple-500 border border-purple-500/20"
+                              : "bg-blue-500/10 text-blue-500 border border-blue-500/20",
+                          )}
+                        >
+                          {expense.expenseType === "fixed" && (
+                            <Lock className="h-3 w-3 mr-1" />
+                          )}
+                          {expense.expenseType === "fixed" ? "Fixed" : "Daily"}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right font-semibold">
                         {formatCurrency(expense.amount)}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEdit(expense)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleDelete(expense)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {permissions.canEdit && (
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleEdit(expense)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleDelete(expense)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
@@ -630,6 +677,28 @@ export default function ExpensesPage() {
                         }
                       />
                     </div>
+                    <div className="w-28 space-y-2">
+                      <Select
+                        value={item.expenseType}
+                        onValueChange={(value: ExpenseType) =>
+                          updateItem(index, "expenseType", value)
+                        }
+                        disabled={!permissions.canAddFixedExpenses}
+                      >
+                        <SelectTrigger className="h-10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="fixed">
+                            <div className="flex items-center">
+                              <Lock className="h-3 w-3 mr-1" />
+                              Fixed
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     {items.length > 1 && (
                       <Button
                         type="button"
@@ -711,6 +780,29 @@ export default function ExpensesPage() {
                   setFormData({ ...formData, amount: Number(e.target.value) })
                 }
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-type">Expense Type</Label>
+              <Select
+                value={formData.expenseType}
+                onValueChange={(value: ExpenseType) =>
+                  setFormData({ ...formData, expenseType: value })
+                }
+                disabled={!permissions.canAddFixedExpenses}
+              >
+                <SelectTrigger id="edit-type" className="h-10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Daily Expense</SelectItem>
+                  <SelectItem value="fixed">
+                    <div className="flex items-center">
+                      <Lock className="h-3 w-3 mr-1" />
+                      Fixed Expense
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Date</Label>

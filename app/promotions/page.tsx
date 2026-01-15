@@ -36,6 +36,7 @@ import {
   DollarSign,
   Download,
   Filter,
+  Lock,
   MessageCircle,
   Paperclip,
   Search,
@@ -52,7 +53,7 @@ export default function PromotionsPage() {
     document.title = "Solune Studio - Promotions";
   }, []);
 
-  const { user, loading } = useAuth();
+  const { user, loading, permissions } = useAuth();
   const router = useRouter();
   const { appointments } = useAppointments();
 
@@ -325,6 +326,12 @@ export default function PromotionsPage() {
             <h1 className="text-3xl font-bold tracking-tight">Promotions</h1>
             <p className="text-muted-foreground">
               Manage client communications and promotional messages
+              {!permissions.canEditPromotions && (
+                <span className="ml-2 inline-flex items-center text-xs">
+                  <Lock className="h-3 w-3 mr-1" />
+                  View only
+                </span>
+              )}
             </p>
           </div>
           <Button
@@ -401,6 +408,7 @@ export default function PromotionsPage() {
                     variant="default"
                     size="sm"
                     onClick={handleSendBulkMessage}
+                    disabled={!permissions.canEditPromotions}
                   >
                     <MessageCircle className="h-4 w-4 mr-2" />
                     Send to {selectedClients.size} client
@@ -502,6 +510,7 @@ export default function PromotionsPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleSendMessage(client)}
+                          disabled={!permissions.canEditPromotions}
                         >
                           <MessageCircle className="h-4 w-4 mr-1" />
                           WhatsApp

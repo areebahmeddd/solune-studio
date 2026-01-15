@@ -68,7 +68,7 @@ export default function InventoryPage() {
     document.title = "Solune Studio - Inventory";
   }, []);
 
-  const { user, loading } = useAuth();
+  const { user, loading, permissions } = useAuth();
   const router = useRouter();
   const {
     products,
@@ -625,7 +625,10 @@ export default function InventoryPage() {
                         className="h-10 w-[250px] pl-9"
                       />
                     </div>
-                    <Button onClick={() => setIsAddProductOpen(true)}>
+                    <Button
+                      onClick={() => setIsAddProductOpen(true)}
+                      disabled={!permissions.canEdit}
+                    >
                       <Plus className="mr-2 h-4 w-4" />
                       Add Product
                     </Button>

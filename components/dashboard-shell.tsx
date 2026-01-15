@@ -9,6 +9,7 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  Lock,
   LogOut,
   Megaphone,
   Package,
@@ -27,7 +28,7 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ children }: DashboardShellProps) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, userRole, permissions } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -63,12 +64,32 @@ export function DashboardShell({ children }: DashboardShellProps) {
   };
 
   const navItems = [
-    { label: "Sales", icon: Receipt, href: "/sales" },
-    { label: "Expenses", icon: Wallet, href: "/expenses" },
-    { label: "Inventory", icon: Package, href: "/inventory" },
-    { label: "Promotions", icon: Megaphone, href: "/promotions" },
-    { label: "Analytics", icon: BarChart3, href: "/analytics" },
-    { label: "Settings", icon: Settings, href: "/settings" },
+    { label: "Sales", icon: Receipt, href: "/sales", restricted: false },
+    { label: "Expenses", icon: Wallet, href: "/expenses", restricted: false },
+    {
+      label: "Inventory",
+      icon: Package,
+      href: "/inventory",
+      restricted: false,
+    },
+    {
+      label: "Promotions",
+      icon: Megaphone,
+      href: "/promotions",
+      restricted: !permissions.canEditPromotions,
+    },
+    {
+      label: "Analytics",
+      icon: BarChart3,
+      href: "/analytics",
+      restricted: !permissions.canEditAnalytics,
+    },
+    {
+      label: "Settings",
+      icon: Settings,
+      href: "/settings",
+      restricted: !permissions.canEditSettings,
+    },
   ];
 
   return (
@@ -114,7 +135,14 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 title={isCollapsed ? item.label : undefined}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                {!isCollapsed && item.label}
+                {!isCollapsed && (
+                  <>
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {item.restricted && (
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
+                  </>
+                )}
               </Button>
             </Link>
           ))}

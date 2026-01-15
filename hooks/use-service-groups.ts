@@ -21,7 +21,6 @@ export interface ServiceGroup {
 
 export const useServiceGroups = () => {
   const [serviceGroups, setServiceGroups] = useState<ServiceGroup[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const q = query(collection(db, "serviceGroups"));
@@ -32,7 +31,6 @@ export const useServiceGroups = () => {
         data.push({ id: doc.id, ...doc.data() } as ServiceGroup);
       });
       setServiceGroups(data.sort((a, b) => a.order - b.order));
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -67,7 +65,6 @@ export const useServiceGroups = () => {
 
   return {
     serviceGroups,
-    loading,
     addServiceGroup,
     updateServiceGroup,
     deleteServiceGroup,

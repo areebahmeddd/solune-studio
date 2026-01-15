@@ -22,7 +22,6 @@ export interface Service {
 
 export const useServices = () => {
   const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const q = query(collection(db, "services"));
@@ -33,7 +32,6 @@ export const useServices = () => {
         data.push({ id: doc.id, ...doc.data() } as Service);
       });
       setServices(data);
-      setLoading(false);
     });
 
     return () => unsubscribe();

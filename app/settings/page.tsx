@@ -39,6 +39,7 @@ import {
   Folder,
   Layers,
   Loader2,
+  Lock,
   Plus,
   Scissors,
   Trash2,
@@ -53,7 +54,7 @@ export default function SettingsPage() {
     document.title = "Solune Studio - Settings";
   }, []);
 
-  const { user, loading } = useAuth();
+  const { user, loading, permissions } = useAuth();
   const router = useRouter();
   const { services, addService, updateService, deleteService } = useServices();
   const {
@@ -520,7 +521,9 @@ export default function SettingsPage() {
           <TableHead className="w-auto">Service Name</TableHead>
           <TableHead className="w-[180px]">Group</TableHead>
           <TableHead className="w-[150px] text-right">Price</TableHead>
-          <TableHead className="w-[100px] text-right">Actions</TableHead>
+          {permissions.canEditSettings && (
+            <TableHead className="w-[100px] text-right">Actions</TableHead>
+          )}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -550,26 +553,28 @@ export default function SettingsPage() {
                 <TableCell className="text-right font-semibold">
                   {formatCurrency(service.price)}
                 </TableCell>
-                <TableCell>
-                  <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleEdit(service)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleDelete(service)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
+                {permissions.canEditSettings && (
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleEdit(service)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleDelete(service)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             );
           })
@@ -589,6 +594,12 @@ export default function SettingsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
           <p className="text-muted-foreground">
             Manage your salon services and prices
+            {!permissions.canEditSettings && (
+              <span className="ml-2 inline-flex items-center text-xs">
+                <Lock className="h-3 w-3 mr-1" />
+                View only
+              </span>
+            )}
           </p>
         </div>
 
@@ -688,7 +699,10 @@ export default function SettingsPage() {
                         <SelectItem value="women">Women Only</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button onClick={() => setIsAddGroupModalOpen(true)}>
+                    <Button
+                      onClick={() => setIsAddGroupModalOpen(true)}
+                      disabled={!permissions.canEditSettings}
+                    >
                       <Plus className="mr-2 h-4 w-4" />
                       Add Group
                     </Button>
@@ -702,7 +716,11 @@ export default function SettingsPage() {
                       <TableHead className="w-12">#</TableHead>
                       <TableHead>Group Name</TableHead>
                       <TableHead>Category</TableHead>
-                      <TableHead className="w-24 text-right">Actions</TableHead>
+                      {permissions.canEditSettings && (
+                        <TableHead className="w-24 text-right">
+                          Actions
+                        </TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -741,26 +759,28 @@ export default function SettingsPage() {
                                   : "Women"}
                             </span>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => handleEditGroup(group)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => handleDeleteGroup(group)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
+                          {permissions.canEditSettings && (
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleEditGroup(group)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleDeleteGroup(group)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))
                     )}
@@ -795,7 +815,10 @@ export default function SettingsPage() {
                         <SelectItem value="high">Premium (₹1K+)</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button onClick={() => setIsAddModalOpen(true)}>
+                    <Button
+                      onClick={() => setIsAddModalOpen(true)}
+                      disabled={!permissions.canEditSettings}
+                    >
                       <Plus className="mr-2 h-4 w-4" />
                       Add Service
                     </Button>
@@ -844,7 +867,10 @@ export default function SettingsPage() {
                       <SelectItem value="female">Female Stylists</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button onClick={() => setIsAddStylistModalOpen(true)}>
+                  <Button
+                    onClick={() => setIsAddStylistModalOpen(true)}
+                    disabled={!permissions.canEditSettings}
+                  >
                     <Plus className="mr-2 h-4 w-4" />
                     Add Stylist
                   </Button>
@@ -857,7 +883,11 @@ export default function SettingsPage() {
                       <TableHead className="w-12">#</TableHead>
                       <TableHead>Stylist Name</TableHead>
                       <TableHead>Gender</TableHead>
-                      <TableHead className="w-24 text-right">Actions</TableHead>
+                      {permissions.canEditSettings && (
+                        <TableHead className="w-24 text-right">
+                          Actions
+                        </TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -887,26 +917,28 @@ export default function SettingsPage() {
                               {stylist.gender}
                             </span>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => handleEditStylist(stylist)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => handleDeleteStylist(stylist)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
+                          {permissions.canEditSettings && (
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleEditStylist(stylist)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleDeleteStylist(stylist)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))
                     )}

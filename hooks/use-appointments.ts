@@ -34,7 +34,6 @@ export interface Appointment {
 
 export const useAppointments = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const q = query(
@@ -48,7 +47,6 @@ export const useAppointments = () => {
         data.push({ id: doc.id, ...doc.data() } as Appointment);
       });
       setAppointments(data);
-      setLoading(false);
     });
 
     return () => unsubscribe();
