@@ -38,13 +38,14 @@ import {
   Filter,
   Folder,
   Layers,
+  Loader2,
   Plus,
   Scissors,
   Trash2,
   User,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -83,7 +84,24 @@ export default function SettingsPage() {
   const [editingStylist, setEditingStylist] = useState<any>(null);
   const [deletingStylist, setDeletingStylist] = useState<any>(null);
 
+  const [isAddingService, setIsAddingService] = useState(false);
+  const [isUpdatingService, setIsUpdatingService] = useState(false);
+  const [isDeletingService, setIsDeletingService] = useState(false);
+  const [isAddingGroup, setIsAddingGroup] = useState(false);
+  const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
+  const [isDeletingGroup, setIsDeletingGroup] = useState(false);
+  const [isAddingStylist, setIsAddingStylist] = useState(false);
+  const [isUpdatingStylist, setIsUpdatingStylist] = useState(false);
+  const [isDeletingStylist, setIsDeletingStylist] = useState(false);
+
   const [formData, setFormData] = useState({
+    name: "",
+    category: "both" as "men" | "women" | "both",
+    price: 0,
+    groupId: "",
+  });
+
+  const [originalFormData, setOriginalFormData] = useState({
     name: "",
     category: "both" as "men" | "women" | "both",
     price: 0,
@@ -96,7 +114,18 @@ export default function SettingsPage() {
     order: 0,
   });
 
+  const [originalGroupFormData, setOriginalGroupFormData] = useState({
+    name: "",
+    category: "both" as "men" | "women" | "both",
+    order: 0,
+  });
+
   const [stylistFormData, setStylistFormData] = useState({
+    name: "",
+    gender: "male" as "male" | "female",
+  });
+
+  const [originalStylistFormData, setOriginalStylistFormData] = useState({
     name: "",
     gender: "male" as "male" | "female",
   });
@@ -163,20 +192,29 @@ export default function SettingsPage() {
       serviceData.groupId = formData.groupId;
     }
 
-    await addService(serviceData);
-
-    setIsAddModalOpen(false);
-    resetForm();
+    setIsAddingService(true);
+    try {
+      await addService(serviceData);
+      toast.success("Service added successfully");
+      setIsAddModalOpen(false);
+      resetForm();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to add service");
+    } finally {
+      setIsAddingService(false);
+    }
   };
 
   const handleEdit = (service: any) => {
     setEditingService(service);
-    setFormData({
+    const data = {
       name: service.name,
       category: service.category,
       price: service.price,
       groupId: service.groupId || "",
-    });
+    };
+    setFormData(data);
+    setOriginalFormData(data);
     setIsEditModalOpen(true);
   };
 
@@ -196,11 +234,18 @@ export default function SettingsPage() {
       serviceData.groupId = formData.groupId;
     }
 
-    await updateService(editingService.id, serviceData);
-
-    setIsEditModalOpen(false);
-    setEditingService(null);
-    resetForm();
+    setIsUpdatingService(true);
+    try {
+      await updateService(editingService.id, serviceData);
+      toast.success("Service updated successfully");
+      setIsEditModalOpen(false);
+      setEditingService(null);
+      resetForm();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update service");
+    } finally {
+      setIsUpdatingService(false);
+    }
   };
 
   const handleDelete = (service: any) => {
@@ -210,9 +255,17 @@ export default function SettingsPage() {
 
   const confirmDelete = async () => {
     if (deletingService) {
-      await deleteService(deletingService.id);
-      setIsDeleteModalOpen(false);
-      setDeletingService(null);
+      setIsDeletingService(true);
+      try {
+        await deleteService(deletingService.id);
+        toast.success("Service deleted successfully");
+        setIsDeleteModalOpen(false);
+        setDeletingService(null);
+      } catch (error: any) {
+        toast.error(error.message || "Failed to delete service");
+      } finally {
+        setIsDeletingService(false);
+      }
     }
   };
 
@@ -222,21 +275,30 @@ export default function SettingsPage() {
       return;
     }
 
-    await addStylist({
-      name: stylistFormData.name,
-      gender: stylistFormData.gender,
-    });
-
-    setIsAddStylistModalOpen(false);
-    resetStylistForm();
+    setIsAddingStylist(true);
+    try {
+      await addStylist({
+        name: stylistFormData.name,
+        gender: stylistFormData.gender,
+      });
+      toast.success("Stylist added successfully");
+      setIsAddStylistModalOpen(false);
+      resetStylistForm();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to add stylist");
+    } finally {
+      setIsAddingStylist(false);
+    }
   };
 
   const handleEditStylist = (stylist: any) => {
     setEditingStylist(stylist);
-    setStylistFormData({
+    const data = {
       name: stylist.name,
       gender: stylist.gender,
-    });
+    };
+    setStylistFormData(data);
+    setOriginalStylistFormData(data);
     setIsEditStylistModalOpen(true);
   };
 
@@ -246,14 +308,21 @@ export default function SettingsPage() {
       return;
     }
 
-    await updateStylist(editingStylist.id, {
-      name: stylistFormData.name,
-      gender: stylistFormData.gender,
-    });
-
-    setIsEditStylistModalOpen(false);
-    setEditingStylist(null);
-    resetStylistForm();
+    setIsUpdatingStylist(true);
+    try {
+      await updateStylist(editingStylist.id, {
+        name: stylistFormData.name,
+        gender: stylistFormData.gender,
+      });
+      toast.success("Stylist updated successfully");
+      setIsEditStylistModalOpen(false);
+      setEditingStylist(null);
+      resetStylistForm();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update stylist");
+    } finally {
+      setIsUpdatingStylist(false);
+    }
   };
 
   const handleDeleteStylist = (stylist: any) => {
@@ -263,9 +332,17 @@ export default function SettingsPage() {
 
   const confirmDeleteStylist = async () => {
     if (deletingStylist) {
-      await deleteStylist(deletingStylist.id);
-      setIsDeleteStylistModalOpen(false);
-      setDeletingStylist(null);
+      setIsDeletingStylist(true);
+      try {
+        await deleteStylist(deletingStylist.id);
+        toast.success("Stylist deleted successfully");
+        setIsDeleteStylistModalOpen(false);
+        setDeletingStylist(null);
+      } catch (error: any) {
+        toast.error(error.message || "Failed to delete stylist");
+      } finally {
+        setIsDeletingStylist(false);
+      }
     }
   };
 
@@ -275,23 +352,32 @@ export default function SettingsPage() {
       return;
     }
 
-    await addServiceGroup({
-      name: groupFormData.name,
-      category: groupFormData.category,
-      order: groupFormData.order,
-    });
-
-    setIsAddGroupModalOpen(false);
-    resetGroupForm();
+    setIsAddingGroup(true);
+    try {
+      await addServiceGroup({
+        name: groupFormData.name,
+        category: groupFormData.category,
+        order: groupFormData.order,
+      });
+      toast.success("Service group added successfully");
+      setIsAddGroupModalOpen(false);
+      resetGroupForm();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to add service group");
+    } finally {
+      setIsAddingGroup(false);
+    }
   };
 
   const handleEditGroup = (group: any) => {
     setEditingGroup(group);
-    setGroupFormData({
+    const data = {
       name: group.name,
       category: group.category,
       order: group.order,
-    });
+    };
+    setGroupFormData(data);
+    setOriginalGroupFormData(data);
     setIsEditGroupModalOpen(true);
   };
 
@@ -301,15 +387,22 @@ export default function SettingsPage() {
       return;
     }
 
-    await updateServiceGroup(editingGroup.id, {
-      name: groupFormData.name,
-      category: groupFormData.category,
-      order: groupFormData.order,
-    });
-
-    setIsEditGroupModalOpen(false);
-    setEditingGroup(null);
-    resetGroupForm();
+    setIsUpdatingGroup(true);
+    try {
+      await updateServiceGroup(editingGroup.id, {
+        name: groupFormData.name,
+        category: groupFormData.category,
+        order: groupFormData.order,
+      });
+      toast.success("Service group updated successfully");
+      setIsEditGroupModalOpen(false);
+      setEditingGroup(null);
+      resetGroupForm();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update service group");
+    } finally {
+      setIsUpdatingGroup(false);
+    }
   };
 
   const handleDeleteGroup = (group: any) => {
@@ -319,9 +412,17 @@ export default function SettingsPage() {
 
   const confirmDeleteGroup = async () => {
     if (deletingGroup) {
-      await deleteServiceGroup(deletingGroup.id);
-      setIsDeleteGroupModalOpen(false);
-      setDeletingGroup(null);
+      setIsDeletingGroup(true);
+      try {
+        await deleteServiceGroup(deletingGroup.id);
+        toast.success("Service group deleted successfully");
+        setIsDeleteGroupModalOpen(false);
+        setDeletingGroup(null);
+      } catch (error: any) {
+        toast.error(error.message || "Failed to delete service group");
+      } finally {
+        setIsDeletingGroup(false);
+      }
     }
   };
 
@@ -331,6 +432,45 @@ export default function SettingsPage() {
   const womenServices = services
     .filter((s) => s.category === "women")
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  const hasServiceFormChanged = useMemo(() => {
+    if (!originalFormData.name) return false;
+    return (
+      formData.name !== originalFormData.name ||
+      formData.category !== originalFormData.category ||
+      formData.price !== originalFormData.price ||
+      formData.groupId !== originalFormData.groupId
+    );
+  }, [formData, originalFormData]);
+
+  const isServiceFormValid = useMemo(() => {
+    return formData.name.trim().length > 0 && formData.price > 0;
+  }, [formData.name, formData.price]);
+
+  const hasStylistFormChanged = useMemo(() => {
+    if (!originalStylistFormData.name) return false;
+    return (
+      stylistFormData.name !== originalStylistFormData.name ||
+      stylistFormData.gender !== originalStylistFormData.gender
+    );
+  }, [stylistFormData, originalStylistFormData]);
+
+  const isStylistFormValid = useMemo(() => {
+    return stylistFormData.name.trim().length > 0;
+  }, [stylistFormData.name]);
+
+  const hasGroupFormChanged = useMemo(() => {
+    if (!originalGroupFormData.name) return false;
+    return (
+      groupFormData.name !== originalGroupFormData.name ||
+      groupFormData.category !== originalGroupFormData.category ||
+      groupFormData.order !== originalGroupFormData.order
+    );
+  }, [groupFormData, originalGroupFormData]);
+
+  const isGroupFormValid = useMemo(() => {
+    return groupFormData.name.trim().length > 0;
+  }, [groupFormData.name]);
 
   const filterServicesByPrice = (serviceList: any[]) => {
     switch (serviceFilter) {
@@ -778,7 +918,15 @@ export default function SettingsPage() {
         </Tabs>
       </div>
 
-      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+      <Dialog
+        open={isAddModalOpen}
+        onOpenChange={(open) => {
+          if (!isAddingService) {
+            setIsAddModalOpen(open);
+            if (!open) resetForm();
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add New Service</DialogTitle>
@@ -857,15 +1005,38 @@ export default function SettingsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddModalOpen(false)}
+              disabled={isAddingService}
+            >
               Cancel
             </Button>
-            <Button onClick={handleAdd}>Add Service</Button>
+            <Button
+              onClick={handleAdd}
+              disabled={isAddingService || !isServiceFormValid}
+            >
+              {isAddingService && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isAddingService ? "Adding..." : "Add Service"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+      <Dialog
+        open={isEditModalOpen}
+        onOpenChange={(open) => {
+          if (!isUpdatingService) {
+            setIsEditModalOpen(open);
+            if (!open) {
+              setEditingService(null);
+              resetForm();
+            }
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Service</DialogTitle>
@@ -944,15 +1115,35 @@ export default function SettingsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditModalOpen(false)}
+              disabled={isUpdatingService}
+            >
               Cancel
             </Button>
-            <Button onClick={handleUpdate}>Update Service</Button>
+            <Button
+              onClick={handleUpdate}
+              disabled={isUpdatingService || !hasServiceFormChanged}
+            >
+              {isUpdatingService && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isUpdatingService ? "Updating..." : "Update Service"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      <Dialog
+        open={isDeleteModalOpen}
+        onOpenChange={(open) => {
+          if (!isDeletingService) {
+            setIsDeleteModalOpen(open);
+            if (!open) setDeletingService(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Service</DialogTitle>
@@ -965,11 +1156,19 @@ export default function SettingsPage() {
             <Button
               variant="outline"
               onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeletingService}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isDeletingService}
+            >
+              {isDeletingService && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isDeletingService ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -977,7 +1176,12 @@ export default function SettingsPage() {
 
       <Dialog
         open={isAddStylistModalOpen}
-        onOpenChange={setIsAddStylistModalOpen}
+        onOpenChange={(open) => {
+          if (!isAddingStylist) {
+            setIsAddStylistModalOpen(open);
+            if (!open) resetStylistForm();
+          }
+        }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1026,17 +1230,34 @@ export default function SettingsPage() {
             <Button
               variant="outline"
               onClick={() => setIsAddStylistModalOpen(false)}
+              disabled={isAddingStylist}
             >
               Cancel
             </Button>
-            <Button onClick={handleAddStylist}>Add Stylist</Button>
+            <Button
+              onClick={handleAddStylist}
+              disabled={isAddingStylist || !isStylistFormValid}
+            >
+              {isAddingStylist && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isAddingStylist ? "Adding..." : "Add Stylist"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog
         open={isEditStylistModalOpen}
-        onOpenChange={setIsEditStylistModalOpen}
+        onOpenChange={(open) => {
+          if (!isUpdatingStylist) {
+            setIsEditStylistModalOpen(open);
+            if (!open) {
+              setEditingStylist(null);
+              resetStylistForm();
+            }
+          }
+        }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1083,17 +1304,31 @@ export default function SettingsPage() {
             <Button
               variant="outline"
               onClick={() => setIsEditStylistModalOpen(false)}
+              disabled={isUpdatingStylist}
             >
               Cancel
             </Button>
-            <Button onClick={handleUpdateStylist}>Update Stylist</Button>
+            <Button
+              onClick={handleUpdateStylist}
+              disabled={isUpdatingStylist || !hasStylistFormChanged}
+            >
+              {isUpdatingStylist && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isUpdatingStylist ? "Updating..." : "Update Stylist"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog
         open={isDeleteStylistModalOpen}
-        onOpenChange={setIsDeleteStylistModalOpen}
+        onOpenChange={(open) => {
+          if (!isDeletingStylist) {
+            setIsDeleteStylistModalOpen(open);
+            if (!open) setDeletingStylist(null);
+          }
+        }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1107,17 +1342,33 @@ export default function SettingsPage() {
             <Button
               variant="outline"
               onClick={() => setIsDeleteStylistModalOpen(false)}
+              disabled={isDeletingStylist}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDeleteStylist}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteStylist}
+              disabled={isDeletingStylist}
+            >
+              {isDeletingStylist && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isDeletingStylist ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isAddGroupModalOpen} onOpenChange={setIsAddGroupModalOpen}>
+      <Dialog
+        open={isAddGroupModalOpen}
+        onOpenChange={(open) => {
+          if (!isAddingGroup) {
+            setIsAddGroupModalOpen(open);
+            if (!open) resetGroupForm();
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add Service Group</DialogTitle>
@@ -1166,17 +1417,34 @@ export default function SettingsPage() {
             <Button
               variant="outline"
               onClick={() => setIsAddGroupModalOpen(false)}
+              disabled={isAddingGroup}
             >
               Cancel
             </Button>
-            <Button onClick={handleAddGroup}>Add Group</Button>
+            <Button
+              onClick={handleAddGroup}
+              disabled={isAddingGroup || !isGroupFormValid}
+            >
+              {isAddingGroup && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isAddingGroup ? "Adding..." : "Add Group"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog
         open={isEditGroupModalOpen}
-        onOpenChange={setIsEditGroupModalOpen}
+        onOpenChange={(open) => {
+          if (!isUpdatingGroup) {
+            setIsEditGroupModalOpen(open);
+            if (!open) {
+              setEditingGroup(null);
+              resetGroupForm();
+            }
+          }
+        }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1224,17 +1492,31 @@ export default function SettingsPage() {
             <Button
               variant="outline"
               onClick={() => setIsEditGroupModalOpen(false)}
+              disabled={isUpdatingGroup}
             >
               Cancel
             </Button>
-            <Button onClick={handleUpdateGroup}>Update Group</Button>
+            <Button
+              onClick={handleUpdateGroup}
+              disabled={isUpdatingGroup || !hasGroupFormChanged}
+            >
+              {isUpdatingGroup && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isUpdatingGroup ? "Updating..." : "Update Group"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog
         open={isDeleteGroupModalOpen}
-        onOpenChange={setIsDeleteGroupModalOpen}
+        onOpenChange={(open) => {
+          if (!isDeletingGroup) {
+            setIsDeleteGroupModalOpen(open);
+            if (!open) setDeletingGroup(null);
+          }
+        }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1248,11 +1530,19 @@ export default function SettingsPage() {
             <Button
               variant="outline"
               onClick={() => setIsDeleteGroupModalOpen(false)}
+              disabled={isDeletingGroup}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDeleteGroup}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteGroup}
+              disabled={isDeletingGroup}
+            >
+              {isDeletingGroup && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isDeletingGroup ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

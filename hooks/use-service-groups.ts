@@ -11,7 +11,6 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 export interface ServiceGroup {
   id: string;
@@ -40,12 +39,10 @@ export const useServiceGroups = () => {
   }, []);
 
   const addServiceGroup = async (group: Omit<ServiceGroup, "id">) => {
-    const toastId = `add-group-${Date.now()}`;
     try {
       await addDoc(collection(db, "serviceGroups"), group);
-      toast.success("Service group added successfully", { id: toastId });
     } catch (error) {
-      toast.error("Failed to add service group", { id: toastId });
+      throw error;
     }
   };
 
@@ -53,22 +50,18 @@ export const useServiceGroups = () => {
     id: string,
     group: Omit<ServiceGroup, "id">,
   ) => {
-    const toastId = `update-group-${id}`;
     try {
       await updateDoc(doc(db, "serviceGroups", id), group);
-      toast.success("Service group updated successfully", { id: toastId });
     } catch (error) {
-      toast.error("Failed to update service group", { id: toastId });
+      throw error;
     }
   };
 
   const deleteServiceGroup = async (id: string) => {
-    const toastId = `delete-group-${id}`;
     try {
       await deleteDoc(doc(db, "serviceGroups", id));
-      toast.success("Service group deleted successfully", { id: toastId });
     } catch (error) {
-      toast.error("Failed to delete service group", { id: toastId });
+      throw error;
     }
   };
 

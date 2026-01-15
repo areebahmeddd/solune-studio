@@ -697,15 +697,15 @@ export default function AnalyticsPage() {
                 Popular services by booking count
               </CardDescription>
             </CardHeader>
-            <CardContent className="h-[300px]">
+            <CardContent className="h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart margin={{ top: 20, right: 0, bottom: 0, left: 0 }}>
                   <Pie
                     data={serviceDistribution}
                     cx="50%"
-                    cy="50%"
+                    cy="45%"
                     labelLine={false}
-                    outerRadius={80}
+                    outerRadius={70}
                     fill="#8884d8"
                     dataKey="value"
                     label={({ percent }) => {
@@ -721,7 +721,7 @@ export default function AnalyticsPage() {
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend />
+                  <Legend wrapperStyle={{ paddingTop: "10px" }} />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
@@ -732,18 +732,18 @@ export default function AnalyticsPage() {
               <CardTitle>Payment Methods</CardTitle>
               <CardDescription>Revenue split by payment type</CardDescription>
             </CardHeader>
-            <CardContent className="h-[300px]">
+            <CardContent className="h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart margin={{ top: 20, right: 0, bottom: 0, left: 0 }}>
                   <Pie
                     data={paymentDistribution}
                     cx="50%"
-                    cy="50%"
+                    cy="45%"
                     labelLine={false}
                     label={({ percent }) =>
                       `${((percent ?? 0) * 100).toFixed(1)}%`
                     }
-                    outerRadius={80}
+                    outerRadius={70}
                     fill="#8884d8"
                     dataKey="value"
                   >
@@ -756,7 +756,7 @@ export default function AnalyticsPage() {
                       value !== undefined ? formatCurrency(value) : ""
                     }
                   />
-                  <Legend />
+                  <Legend wrapperStyle={{ paddingTop: "10px" }} />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>

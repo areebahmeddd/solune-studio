@@ -11,7 +11,6 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 export interface Stylist {
   id: string;
@@ -39,32 +38,26 @@ export const useStylists = () => {
   }, []);
 
   const addStylist = async (stylist: Omit<Stylist, "id">) => {
-    const toastId = `add-stylist-${Date.now()}`;
     try {
       await addDoc(collection(db, "stylists"), stylist);
-      toast.success("Stylist added successfully", { id: toastId });
     } catch (error) {
-      toast.error("Failed to add stylist", { id: toastId });
+      throw error;
     }
   };
 
   const updateStylist = async (id: string, stylist: Omit<Stylist, "id">) => {
-    const toastId = `update-stylist-${id}`;
     try {
       await updateDoc(doc(db, "stylists", id), stylist);
-      toast.success("Stylist updated successfully", { id: toastId });
     } catch (error) {
-      toast.error("Failed to update stylist", { id: toastId });
+      throw error;
     }
   };
 
   const deleteStylist = async (id: string) => {
-    const toastId = `delete-stylist-${id}`;
     try {
       await deleteDoc(doc(db, "stylists", id));
-      toast.success("Stylist deleted successfully", { id: toastId });
     } catch (error) {
-      toast.error("Failed to delete stylist", { id: toastId });
+      throw error;
     }
   };
 

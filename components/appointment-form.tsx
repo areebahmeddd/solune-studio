@@ -31,7 +31,7 @@ import { useStylists } from "@/hooks/use-stylists";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2, Pencil, Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 const PAYMENT_METHODS = ["Cash", "Card", "UPI"];
@@ -75,6 +75,18 @@ export function AppointmentForm({
     paymentMethod: appointment?.paymentMethod || "",
     stylist: appointment?.stylist || "",
   });
+
+  const [originalFormData, setOriginalFormData] = useState({
+    name: appointment?.name || "",
+    phone: appointment?.phone || "",
+    services: appointment?.services || [],
+    date: appointment?.date ? new Date(appointment.date) : new Date(),
+    amount: appointment?.amount || 0,
+    discount: appointment?.discount || 0,
+    paymentMethod: appointment?.paymentMethod || "",
+    stylist: appointment?.stylist || "",
+  });
+
   const [selectedService, setSelectedService] = useState("");
   const [editingServiceIndex, setEditingServiceIndex] = useState<number | null>(
     null,
@@ -297,6 +309,31 @@ export function AppointmentForm({
 
   const discountAmount = (discountableAmount * formData.discount) / 100;
   const finalAmount = formData.amount - discountAmount;
+
+  const isFormValid = useMemo(() => {
+    return (
+      formData.name.trim().length > 0 &&
+      formData.phone.length === 10 &&
+      formData.services.length > 0 &&
+      formData.services.every((s: any) => s.stylist) &&
+      formData.paymentMethod.trim().length > 0 &&
+      formData.amount > 0
+    );
+  }, [formData]);
+
+  const hasFormChanged = useMemo(() => {
+    if (!appointment?.id) return true;
+    return (
+      formData.name !== originalFormData.name ||
+      formData.phone !== originalFormData.phone ||
+      JSON.stringify(formData.services) !==
+        JSON.stringify(originalFormData.services) ||
+      formData.date.getTime() !== originalFormData.date.getTime() ||
+      formData.amount !== originalFormData.amount ||
+      formData.discount !== originalFormData.discount ||
+      formData.paymentMethod !== originalFormData.paymentMethod
+    );
+  }, [formData, originalFormData, appointment]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -697,7 +734,13 @@ export function AppointmentForm({
         </CardContent>
       </Card>
 
-      <Button type="submit" className="w-full h-11" disabled={loading}>
+      <Button
+        type="submit"
+        className="w-full h-11"
+        disabled={
+          loading || !isFormValid || (appointment?.id && !hasFormChanged)
+        }
+      >
         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {loading
           ? appointment?.id

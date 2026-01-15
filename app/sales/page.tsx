@@ -16,7 +16,7 @@ import {
 import { useAppointments } from "@/hooks/use-appointments";
 import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
-import { Download, Plus } from "lucide-react";
+import { Download, Loader2, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -36,6 +36,7 @@ export default function AppointmentsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<any>(null);
   const [deletingAppointment, setDeletingAppointment] = useState<any>(null);
+  const [isDeletingAppointment, setIsDeletingAppointment] = useState(false);
   const [dateFilter, setDateFilter] = useState<
     "all" | "today" | "7days" | "thisMonth" | "lastMonth"
   >("today");
@@ -61,9 +62,17 @@ export default function AppointmentsPage() {
 
   const confirmDelete = async () => {
     if (deletingAppointment) {
-      await deleteAppointment(deletingAppointment.id);
-      setIsDeleteModalOpen(false);
-      setDeletingAppointment(null);
+      setIsDeletingAppointment(true);
+      try {
+        await deleteAppointment(deletingAppointment.id);
+        toast.success("Appointment deleted successfully");
+        setIsDeleteModalOpen(false);
+        setDeletingAppointment(null);
+      } catch (error: any) {
+        toast.error(error.message || "Failed to delete appointment");
+      } finally {
+        setIsDeletingAppointment(false);
+      }
     }
   };
 
@@ -203,7 +212,15 @@ export default function AppointmentsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      <Dialog
+        open={isDeleteModalOpen}
+        onOpenChange={(open) => {
+          if (!isDeletingAppointment) {
+            setIsDeleteModalOpen(open);
+            if (!open) setDeletingAppointment(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Appointment</DialogTitle>
@@ -216,11 +233,19 @@ export default function AppointmentsPage() {
             <Button
               variant="outline"
               onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeletingAppointment}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isDeletingAppointment}
+            >
+              {isDeletingAppointment && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isDeletingAppointment ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

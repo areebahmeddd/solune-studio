@@ -44,6 +44,13 @@ export function DashboardShell({ children }: DashboardShellProps) {
     localStorage.setItem("sidebar-collapsed", String(newState));
   };
 
+  const expandSidebar = () => {
+    if (isCollapsed) {
+      setIsCollapsed(false);
+      localStorage.setItem("sidebar-collapsed", "false");
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       sessionStorage.setItem("signing-out", "true");
@@ -143,7 +150,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
           ) : (
             <div className="space-y-2">
               <div className="flex justify-center">
-                <Avatar className="h-9 w-9 border-2 border-primary/10">
+                <Avatar
+                  className="h-9 w-9 border-2 border-primary/10 cursor-pointer hover:border-primary/30 transition-colors"
+                  onClick={expandSidebar}
+                >
                   <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
                     {user?.email?.charAt(0).toUpperCase() || "U"}
                   </AvatarFallback>

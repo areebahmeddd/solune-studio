@@ -42,15 +42,13 @@ export const useExpenses = () => {
   }, []);
 
   const addExpense = async (expense: Omit<Expense, "id">) => {
-    const toastId = `add-expense-${Date.now()}`;
     try {
       await addDoc(collection(db, "expenses"), {
         ...expense,
         timestamp: new Date().toISOString(),
       });
-      toast.success("Expense added successfully", { id: toastId });
     } catch (error) {
-      toast.error("Failed to add expense", { id: toastId });
+      throw error;
     }
   };
 
@@ -68,12 +66,10 @@ export const useExpenses = () => {
   };
 
   const deleteExpense = async (id: string) => {
-    const toastId = `delete-expense-${id}`;
     try {
       await deleteDoc(doc(db, "expenses", id));
-      toast.success("Expense deleted successfully", { id: toastId });
     } catch (error) {
-      toast.error("Failed to delete expense", { id: toastId });
+      throw error;
     }
   };
 

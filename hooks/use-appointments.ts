@@ -12,7 +12,6 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 export interface ServiceItem {
   name: string;
@@ -56,15 +55,13 @@ export const useAppointments = () => {
   }, []);
 
   const addAppointment = async (appointment: Omit<Appointment, "id">) => {
-    const toastId = `add-appointment-${Date.now()}`;
     try {
       await addDoc(collection(db, "appointments"), {
         ...appointment,
         timestamp: new Date().toISOString(),
       });
-      toast.success("Appointment added successfully", { id: toastId });
     } catch (error) {
-      toast.error("Failed to add appointment", { id: toastId });
+      throw error;
     }
   };
 
@@ -72,25 +69,21 @@ export const useAppointments = () => {
     id: string,
     appointment: Omit<Appointment, "id">,
   ) => {
-    const toastId = `update-appointment-${id}`;
     try {
       await updateDoc(doc(db, "appointments", id), {
         ...appointment,
         timestamp: new Date().toISOString(),
       });
-      toast.success("Appointment updated successfully", { id: toastId });
     } catch (error) {
-      toast.error("Failed to update appointment", { id: toastId });
+      throw error;
     }
   };
 
   const deleteAppointment = async (id: string) => {
-    const toastId = `delete-appointment-${id}`;
     try {
       await deleteDoc(doc(db, "appointments", id));
-      toast.success("Appointment deleted successfully", { id: toastId });
     } catch (error) {
-      toast.error("Failed to delete appointment", { id: toastId });
+      throw error;
     }
   };
 

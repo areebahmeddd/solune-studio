@@ -52,6 +52,7 @@ import {
   Download,
   Edit,
   History,
+  Loader2,
   Package,
   PackageX,
   Plus,
@@ -97,12 +98,38 @@ export default function InventoryPage() {
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [deletingTransaction, setDeletingTransaction] = useState<any>(null);
 
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [isUpdatingProduct, setIsUpdatingProduct] = useState(false);
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false);
+  const [isAddingTransaction, setIsAddingTransaction] = useState(false);
+  const [isUpdatingTransaction, setIsUpdatingTransaction] = useState(false);
+  const [isDeletingTransaction, setIsDeletingTransaction] = useState(false);
+
   const [productForm, setProductForm] = useState({
     name: "",
     expiryDate: undefined as Date | undefined,
   });
 
+  const [originalProductForm, setOriginalProductForm] = useState({
+    name: "",
+    expiryDate: undefined as Date | undefined,
+  });
+
   const [transactionForm, setTransactionForm] = useState<{
+    productId: string;
+    type: "revaluation" | "transaction";
+    quantity: number | null;
+    price: number | null;
+    date: Date;
+  }>({
+    productId: "",
+    type: "revaluation",
+    quantity: 0,
+    price: 0,
+    date: new Date(),
+  });
+
+  const [originalTransactionForm, setOriginalTransactionForm] = useState<{
     productId: string;
     type: "revaluation" | "transaction";
     quantity: number | null;
@@ -149,6 +176,40 @@ export default function InventoryPage() {
     );
   }, [transactions, transactionSearchTerm]);
 
+  const hasProductFormChanged = useMemo(() => {
+    if (!originalProductForm.name) return false;
+    return (
+      productForm.name !== originalProductForm.name ||
+      productForm.expiryDate?.getTime() !==
+        originalProductForm.expiryDate?.getTime()
+    );
+  }, [productForm, originalProductForm]);
+
+  const isProductFormValid = useMemo(() => {
+    return productForm.name.trim().length > 0;
+  }, [productForm.name]);
+
+  const hasTransactionFormChanged = useMemo(() => {
+    if (!originalTransactionForm.productId) return false;
+    return (
+      transactionForm.productId !== originalTransactionForm.productId ||
+      transactionForm.type !== originalTransactionForm.type ||
+      transactionForm.quantity !== originalTransactionForm.quantity ||
+      transactionForm.price !== originalTransactionForm.price ||
+      transactionForm.date.getTime() !== originalTransactionForm.date.getTime()
+    );
+  }, [transactionForm, originalTransactionForm]);
+
+  const isTransactionFormValid = useMemo(() => {
+    return (
+      transactionForm.productId.trim().length > 0 &&
+      transactionForm.quantity !== null &&
+      transactionForm.quantity > 0 &&
+      transactionForm.price !== null &&
+      transactionForm.price > 0
+    );
+  }, [transactionForm]);
+
   const groupedTransactions = useMemo(() => {
     const groups = new Map<string, typeof transactions>();
 
@@ -192,22 +253,32 @@ export default function InventoryPage() {
       toast.error("Please enter product name");
       return;
     }
-    await addProduct({
-      name: productForm.name,
-      expiryDate: productForm.expiryDate
-        ? format(productForm.expiryDate, "yyyy-MM-dd")
-        : "",
-    });
-    setIsAddProductOpen(false);
-    resetProductForm();
+    setIsAddingProduct(true);
+    try {
+      await addProduct({
+        name: productForm.name,
+        expiryDate: productForm.expiryDate
+          ? format(productForm.expiryDate, "yyyy-MM-dd")
+          : "",
+      });
+      toast.success("Product added successfully");
+      setIsAddProductOpen(false);
+      resetProductForm();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to add product");
+    } finally {
+      setIsAddingProduct(false);
+    }
   };
 
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
-    setProductForm({
+    const formData = {
       name: product.name,
       expiryDate: product.expiryDate ? new Date(product.expiryDate) : undefined,
-    });
+    };
+    setProductForm(formData);
+    setOriginalProductForm(formData);
     setIsEditProductOpen(true);
   };
 
@@ -217,15 +288,23 @@ export default function InventoryPage() {
       toast.error("Please enter product name");
       return;
     }
-    await updateProduct(editingProduct.id, {
-      name: productForm.name,
-      expiryDate: productForm.expiryDate
-        ? format(productForm.expiryDate, "yyyy-MM-dd")
-        : "",
-    });
-    setIsEditProductOpen(false);
-    setEditingProduct(null);
-    resetProductForm();
+    setIsUpdatingProduct(true);
+    try {
+      await updateProduct(editingProduct.id, {
+        name: productForm.name,
+        expiryDate: productForm.expiryDate
+          ? format(productForm.expiryDate, "yyyy-MM-dd")
+          : "",
+      });
+      toast.success("Product updated successfully");
+      setIsEditProductOpen(false);
+      setEditingProduct(null);
+      resetProductForm();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update product");
+    } finally {
+      setIsUpdatingProduct(false);
+    }
   };
 
   const handleDeleteProduct = (product: Product) => {
@@ -235,9 +314,17 @@ export default function InventoryPage() {
 
   const confirmDeleteProduct = async () => {
     if (deletingProduct) {
-      await deleteProduct(deletingProduct.id);
-      setIsDeleteProductOpen(false);
-      setDeletingProduct(null);
+      setIsDeletingProduct(true);
+      try {
+        await deleteProduct(deletingProduct.id);
+        toast.success("Product deleted successfully");
+        setIsDeleteProductOpen(false);
+        setDeletingProduct(null);
+      } catch (error: any) {
+        toast.error(error.message || "Failed to delete product");
+      } finally {
+        setIsDeletingProduct(false);
+      }
     }
   };
 
@@ -266,31 +353,40 @@ export default function InventoryPage() {
     const product = products.find((p) => p.id === transactionForm.productId);
     if (!product) return;
 
-    await addTransaction({
-      productId: transactionForm.productId,
-      productName: product.name,
-      type: transactionForm.type,
-      quantity: transactionForm.quantity,
-      price:
-        transactionForm.type === "revaluation"
-          ? 0
-          : (transactionForm.price ?? 0),
-      date: format(transactionForm.date, "yyyy-MM-dd"),
-    });
-
-    setIsAddTransactionOpen(false);
-    resetTransactionForm();
+    setIsAddingTransaction(true);
+    try {
+      await addTransaction({
+        productId: transactionForm.productId,
+        productName: product.name,
+        type: transactionForm.type,
+        quantity: transactionForm.quantity,
+        price:
+          transactionForm.type === "revaluation"
+            ? 0
+            : (transactionForm.price ?? 0),
+        date: format(transactionForm.date, "yyyy-MM-dd"),
+      });
+      toast.success("Transaction added successfully");
+      setIsAddTransactionOpen(false);
+      resetTransactionForm();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to add transaction");
+    } finally {
+      setIsAddingTransaction(false);
+    }
   };
 
   const handleEditTransaction = (transaction: any) => {
     setEditingTransaction(transaction);
-    setTransactionForm({
+    const formData = {
       productId: transaction.productId,
       type: transaction.type,
       quantity: transaction.quantity,
       price: transaction.price,
       date: new Date(transaction.date),
-    });
+    };
+    setTransactionForm(formData);
+    setOriginalTransactionForm(formData);
     setIsEditTransactionOpen(true);
   };
 
@@ -320,22 +416,29 @@ export default function InventoryPage() {
     const product = products.find((p) => p.id === transactionForm.productId);
     if (!product) return;
 
-    await deleteTransaction(editingTransaction.id);
-    await addTransaction({
-      productId: transactionForm.productId,
-      productName: product.name,
-      type: transactionForm.type,
-      quantity: transactionForm.quantity,
-      price:
-        transactionForm.type === "revaluation"
-          ? 0
-          : (transactionForm.price ?? 0),
-      date: format(transactionForm.date, "yyyy-MM-dd"),
-    });
-
-    setIsEditTransactionOpen(false);
-    setEditingTransaction(null);
-    resetTransactionForm();
+    setIsUpdatingTransaction(true);
+    try {
+      await deleteTransaction(editingTransaction.id);
+      await addTransaction({
+        productId: transactionForm.productId,
+        productName: product.name,
+        type: transactionForm.type,
+        quantity: transactionForm.quantity,
+        price:
+          transactionForm.type === "revaluation"
+            ? 0
+            : (transactionForm.price ?? 0),
+        date: format(transactionForm.date, "yyyy-MM-dd"),
+      });
+      toast.success("Transaction updated successfully");
+      setIsEditTransactionOpen(false);
+      setEditingTransaction(null);
+      resetTransactionForm();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update transaction");
+    } finally {
+      setIsUpdatingTransaction(false);
+    }
   };
 
   const handleDeleteTransaction = (transaction: any) => {
@@ -345,9 +448,17 @@ export default function InventoryPage() {
 
   const confirmDeleteTransaction = async () => {
     if (deletingTransaction) {
-      await deleteTransaction(deletingTransaction.id);
-      setIsDeleteTransactionOpen(false);
-      setDeletingTransaction(null);
+      setIsDeletingTransaction(true);
+      try {
+        await deleteTransaction(deletingTransaction.id);
+        toast.success("Transaction deleted successfully");
+        setIsDeleteTransactionOpen(false);
+        setDeletingTransaction(null);
+      } catch (error: any) {
+        toast.error(error.message || "Failed to delete transaction");
+      } finally {
+        setIsDeletingTransaction(false);
+      }
     }
   };
 
@@ -771,7 +882,15 @@ export default function InventoryPage() {
         </Tabs>
       </div>
 
-      <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
+      <Dialog
+        open={isAddProductOpen}
+        onOpenChange={(open) => {
+          if (!isAddingProduct) {
+            setIsAddProductOpen(open);
+            if (!open) resetProductForm();
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add New Product</DialogTitle>
@@ -827,15 +946,35 @@ export default function InventoryPage() {
             <Button
               variant="outline"
               onClick={() => setIsAddProductOpen(false)}
+              disabled={isAddingProduct}
             >
               Cancel
             </Button>
-            <Button onClick={handleAddProduct}>Add Product</Button>
+            <Button
+              onClick={handleAddProduct}
+              disabled={isAddingProduct || !isProductFormValid}
+            >
+              {isAddingProduct && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isAddingProduct ? "Adding..." : "Add Product"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isEditProductOpen} onOpenChange={setIsEditProductOpen}>
+      <Dialog
+        open={isEditProductOpen}
+        onOpenChange={(open) => {
+          if (!isUpdatingProduct) {
+            setIsEditProductOpen(open);
+            if (!open) {
+              setEditingProduct(null);
+              resetProductForm();
+            }
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Product</DialogTitle>
@@ -889,15 +1028,32 @@ export default function InventoryPage() {
             <Button
               variant="outline"
               onClick={() => setIsEditProductOpen(false)}
+              disabled={isUpdatingProduct}
             >
               Cancel
             </Button>
-            <Button onClick={handleUpdateProduct}>Update Product</Button>
+            <Button
+              onClick={handleUpdateProduct}
+              disabled={isUpdatingProduct || !hasProductFormChanged}
+            >
+              {isUpdatingProduct && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isUpdatingProduct ? "Updating..." : "Update Product"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isDeleteProductOpen} onOpenChange={setIsDeleteProductOpen}>
+      <Dialog
+        open={isDeleteProductOpen}
+        onOpenChange={(open) => {
+          if (!isDeletingProduct) {
+            setIsDeleteProductOpen(open);
+            if (!open) setDeletingProduct(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Product</DialogTitle>
@@ -910,11 +1066,19 @@ export default function InventoryPage() {
             <Button
               variant="outline"
               onClick={() => setIsDeleteProductOpen(false)}
+              disabled={isDeletingProduct}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDeleteProduct}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteProduct}
+              disabled={isDeletingProduct}
+            >
+              {isDeletingProduct && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isDeletingProduct ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -922,7 +1086,12 @@ export default function InventoryPage() {
 
       <Dialog
         open={isAddTransactionOpen}
-        onOpenChange={setIsAddTransactionOpen}
+        onOpenChange={(open) => {
+          if (!isAddingTransaction) {
+            setIsAddTransactionOpen(open);
+            if (!open) resetTransactionForm();
+          }
+        }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1057,17 +1226,34 @@ export default function InventoryPage() {
             <Button
               variant="outline"
               onClick={() => setIsAddTransactionOpen(false)}
+              disabled={isAddingTransaction}
             >
               Cancel
             </Button>
-            <Button onClick={handleAddTransaction}>Add Transaction</Button>
+            <Button
+              onClick={handleAddTransaction}
+              disabled={isAddingTransaction || !isTransactionFormValid}
+            >
+              {isAddingTransaction && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isAddingTransaction ? "Adding..." : "Add Transaction"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog
         open={isEditTransactionOpen}
-        onOpenChange={setIsEditTransactionOpen}
+        onOpenChange={(open) => {
+          if (!isUpdatingTransaction) {
+            setIsEditTransactionOpen(open);
+            if (!open) {
+              setEditingTransaction(null);
+              resetTransactionForm();
+            }
+          }
+        }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1200,11 +1386,18 @@ export default function InventoryPage() {
             <Button
               variant="outline"
               onClick={() => setIsEditTransactionOpen(false)}
+              disabled={isUpdatingTransaction}
             >
               Cancel
             </Button>
-            <Button onClick={handleUpdateTransaction}>
-              Update Transaction
+            <Button
+              onClick={handleUpdateTransaction}
+              disabled={isUpdatingTransaction || !hasTransactionFormChanged}
+            >
+              {isUpdatingTransaction && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isUpdatingTransaction ? "Updating..." : "Update Transaction"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1212,7 +1405,12 @@ export default function InventoryPage() {
 
       <Dialog
         open={isDeleteTransactionOpen}
-        onOpenChange={setIsDeleteTransactionOpen}
+        onOpenChange={(open) => {
+          if (!isDeletingTransaction) {
+            setIsDeleteTransactionOpen(open);
+            if (!open) setDeletingTransaction(null);
+          }
+        }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1226,11 +1424,19 @@ export default function InventoryPage() {
             <Button
               variant="outline"
               onClick={() => setIsDeleteTransactionOpen(false)}
+              disabled={isDeletingTransaction}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDeleteTransaction}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteTransaction}
+              disabled={isDeletingTransaction}
+            >
+              {isDeletingTransaction && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isDeletingTransaction ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

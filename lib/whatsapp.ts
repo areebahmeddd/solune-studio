@@ -12,6 +12,8 @@ export interface WhatsAppConfig {
 export interface SendMessageParams {
   to: string;
   message: string;
+  mediaUrl?: string;
+  mediaType?: "image" | "video";
 }
 
 export interface WhatsAppResponse {
@@ -57,16 +59,25 @@ export async function sendWhatsAppMessage(
   }
 
   try {
-    const payload = {
+    let payload: any = {
       messaging_product: "whatsapp",
       recipient_type: "individual",
       to: formattedPhone,
-      type: "text",
-      text: {
+    };
+
+    if (params.mediaUrl && params.mediaType) {
+      payload.type = params.mediaType;
+      payload[params.mediaType] = {
+        link: params.mediaUrl,
+        ...(params.message && { caption: params.message }),
+      };
+    } else {
+      payload.type = "text";
+      payload.text = {
         preview_url: false,
         body: params.message,
-      },
-    };
+      };
+    }
 
     const response = await fetch(url, {
       method: "POST",
@@ -112,7 +123,12 @@ export async function sendWhatsAppMessage(
  */
 export async function sendBulkWhatsAppMessages(
   config: WhatsAppConfig,
-  recipients: Array<{ phone: string; message: string }>,
+  recipients: Array<{
+    phone: string;
+    message: string;
+    mediaUrl?: string;
+    mediaType?: "image" | "video";
+  }>,
   delayBetweenMessages: number = 1000,
 ): Promise<
   Array<{
@@ -135,6 +151,8 @@ export async function sendBulkWhatsAppMessages(
     let result = await sendWhatsAppMessage(config, {
       to: recipient.phone,
       message: recipient.message,
+      mediaUrl: recipient.mediaUrl,
+      mediaType: recipient.mediaType,
     });
 
     if (
@@ -148,6 +166,8 @@ export async function sendBulkWhatsAppMessages(
       result = await sendWhatsAppMessage(config, {
         to: recipient.phone,
         message: recipient.message,
+        mediaUrl: recipient.mediaUrl,
+        mediaType: recipient.mediaType,
       });
 
       results.push({

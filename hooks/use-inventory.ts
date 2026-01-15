@@ -14,7 +14,6 @@ import {
   where,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 export interface Product {
   id: string;
@@ -75,15 +74,13 @@ export const useInventory = () => {
   }, []);
 
   const addProduct = async (product: Omit<Product, "id" | "timestamp">) => {
-    const toastId = `add-product-${Date.now()}`;
     try {
       await addDoc(collection(db, "products"), {
         ...product,
         timestamp: new Date().toISOString(),
       });
-      toast.success("Product added", { id: toastId });
     } catch (error) {
-      toast.error("Failed to add product", { id: toastId });
+      throw error;
     }
   };
 
@@ -91,17 +88,14 @@ export const useInventory = () => {
     id: string,
     product: Omit<Product, "id" | "timestamp">,
   ) => {
-    const toastId = `update-product-${id}`;
     try {
       await updateDoc(doc(db, "products", id), product);
-      toast.success("Product updated", { id: toastId });
     } catch (error) {
-      toast.error("Failed to update product", { id: toastId });
+      throw error;
     }
   };
 
   const deleteProduct = async (id: string) => {
-    const toastId = `delete-product-${id}`;
     try {
       const transactionsQuery = query(
         collection(db, "stockTransactions"),
@@ -115,41 +109,29 @@ export const useInventory = () => {
       await Promise.all(deletePromises);
 
       await deleteDoc(doc(db, "products", id));
-
-      toast.success(
-        `Product deleted${transactionsSnapshot.size > 0 ? ` along with ${transactionsSnapshot.size} transaction(s)` : ""}`,
-        { id: toastId },
-      );
     } catch (error) {
-      toast.error("Failed to delete product", { id: toastId });
+      throw error;
     }
   };
 
   const addTransaction = async (
     transaction: Omit<StockTransaction, "id" | "timestamp">,
   ) => {
-    const toastId = `add-transaction-${Date.now()}`;
     try {
       await addDoc(collection(db, "stockTransactions"), {
         ...transaction,
         timestamp: new Date().toISOString(),
       });
-      toast.success(
-        `${transaction.type === "revaluation" ? "Revaluation" : "Transaction"} recorded`,
-        { id: toastId },
-      );
     } catch (error) {
-      toast.error("Failed to record transaction", { id: toastId });
+      throw error;
     }
   };
 
   const deleteTransaction = async (id: string) => {
-    const toastId = `delete-transaction-${id}`;
     try {
       await deleteDoc(doc(db, "stockTransactions", id));
-      toast.success("Transaction deleted", { id: toastId });
     } catch (error) {
-      toast.error("Failed to delete transaction", { id: toastId });
+      throw error;
     }
   };
 

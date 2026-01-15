@@ -44,6 +44,7 @@ import {
   Download,
   Edit,
   Filter,
+  Loader2,
   Plus,
   ShoppingBag,
   Trash2,
@@ -68,6 +69,8 @@ export default function ExpensesPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
   const [deletingExpense, setDeletingExpense] = useState<any>(null);
   const [dateFilter, setDateFilter] = useState<
@@ -82,6 +85,16 @@ export default function ExpensesPage() {
     amount: 0,
     date: new Date(),
   });
+
+  const [originalFormData, setOriginalFormData] = useState({
+    item: "",
+    amount: 0,
+    date: new Date(),
+  });
+
+  const [items, setItems] = useState<Array<{ item: string; amount: number }>>([
+    { item: "", amount: 0 },
+  ]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -101,33 +114,92 @@ export default function ExpensesPage() {
       amount: 0,
       date: new Date(),
     });
+    setItems([{ item: "", amount: 0 }]);
   };
 
   const handleAdd = async () => {
-    if (!formData.item || formData.amount <= 0) {
-      toast.error("Please enter expense item and valid amount");
+    const validItems = items.filter(
+      (item) => item.item.trim() && item.amount > 0,
+    );
+
+    if (validItems.length === 0) {
+      toast.error("Please enter at least one expense item with valid amount");
       return;
     }
 
-    await addExpense({
-      item: formData.item,
-      amount: formData.amount,
-      date: format(formData.date, "yyyy-MM-dd"),
-      timestamp: new Date().toISOString(),
-    });
+    setIsAdding(true);
 
-    setIsAddModalOpen(false);
-    resetForm();
+    const dateStr = format(formData.date, "yyyy-MM-dd");
+    const timestamp = new Date().toISOString();
+
+    try {
+      for (const item of validItems) {
+        await addExpense({
+          item: item.item,
+          amount: item.amount,
+          date: dateStr,
+          timestamp,
+        });
+      }
+
+      toast.success(
+        `Added ${validItems.length} expense${validItems.length > 1 ? "s" : ""} successfully`,
+      );
+      setIsAddModalOpen(false);
+      resetForm();
+    } catch (error) {
+      toast.error("Failed to add expenses. Please try again.");
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const handleEdit = (expense: any) => {
     setEditingExpense(expense);
-    setFormData({
+    const data = {
       item: expense.item,
       amount: expense.amount,
       date: new Date(expense.date),
-    });
+    };
+    setFormData(data);
+    setOriginalFormData(data);
     setIsEditModalOpen(true);
+  };
+
+  const addItem = () => {
+    setItems([...items, { item: "", amount: 0 }]);
+  };
+
+  const removeItem = (index: number) => {
+    if (items.length > 1) {
+      setItems(items.filter((_, i) => i !== index));
+    }
+  };
+
+  const isFormValid = useMemo(() => {
+    const validItems = items.filter(
+      (item) => item.item.trim() && item.amount > 0,
+    );
+    return validItems.length > 0;
+  }, [items]);
+
+  const hasExpenseFormChanged = useMemo(() => {
+    if (!originalFormData.item) return false;
+    return (
+      formData.item !== originalFormData.item ||
+      formData.amount !== originalFormData.amount ||
+      formData.date.getTime() !== originalFormData.date.getTime()
+    );
+  }, [formData, originalFormData]);
+
+  const updateItem = (
+    index: number,
+    field: "item" | "amount",
+    value: string | number,
+  ) => {
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], [field]: value };
+    setItems(newItems);
   };
 
   const handleUpdate = async () => {
@@ -155,9 +227,18 @@ export default function ExpensesPage() {
 
   const confirmDelete = async () => {
     if (deletingExpense) {
-      await deleteExpense(deletingExpense.id);
-      setIsDeleteModalOpen(false);
-      setDeletingExpense(null);
+      setIsDeleting(true);
+
+      try {
+        await deleteExpense(deletingExpense.id);
+        toast.success("Expense deleted successfully");
+        setIsDeleteModalOpen(false);
+        setDeletingExpense(null);
+      } catch (error) {
+        toast.error("Failed to delete expense. Please try again.");
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -465,36 +546,21 @@ export default function ExpensesPage() {
         </Card>
       </div>
 
-      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+      <Dialog
+        open={isAddModalOpen}
+        onOpenChange={(open) => {
+          if (!isAdding) {
+            setIsAddModalOpen(open);
+            if (!open) resetForm();
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add New Expense</DialogTitle>
-            <DialogDescription>Record a new business expense</DialogDescription>
+            <DialogDescription>Record new business expenses</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="item">Item Name</Label>
-              <Input
-                id="item"
-                placeholder="Enter item name"
-                value={formData.item}
-                onChange={(e) =>
-                  setFormData({ ...formData, item: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount (₹)</Label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="0"
-                value={formData.amount || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, amount: Number(e.target.value) })
-                }
-              />
-            </div>
             <div className="space-y-2">
               <Label>Date</Label>
               <Popover>
@@ -529,17 +595,94 @@ export default function ExpensesPage() {
                 </PopoverContent>
               </Popover>
             </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Items</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addItem}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Item
+                </Button>
+              </div>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {items.map((item, index) => (
+                  <div key={index} className="flex gap-2 items-start">
+                    <div className="flex-1 space-y-2">
+                      <Input
+                        placeholder="Item name"
+                        value={item.item}
+                        onChange={(e) =>
+                          updateItem(index, "item", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="w-32 space-y-2">
+                      <Input
+                        type="number"
+                        placeholder="Amount"
+                        value={item.amount || ""}
+                        onChange={(e) =>
+                          updateItem(index, "amount", Number(e.target.value))
+                        }
+                      />
+                    </div>
+                    {items.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeItem(index)}
+                        className="h-10 w-10 flex-shrink-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddModalOpen(false)}
+              disabled={isAdding}
+            >
               Cancel
             </Button>
-            <Button onClick={handleAdd}>Add Expense</Button>
+            <Button onClick={handleAdd} disabled={isAdding || !isFormValid}>
+              {isAdding ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  Add Expense
+                  {items.filter((i) => i.item.trim() && i.amount > 0).length > 1
+                    ? "s"
+                    : ""}
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+      <Dialog
+        open={isEditModalOpen}
+        onOpenChange={(open) => {
+          setIsEditModalOpen(open);
+          if (!open) {
+            setEditingExpense(null);
+            resetForm();
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Expense</DialogTitle>
@@ -608,12 +751,22 @@ export default function ExpensesPage() {
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpdate}>Update Expense</Button>
+            <Button onClick={handleUpdate} disabled={!hasExpenseFormChanged}>
+              Update Expense
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      <Dialog
+        open={isDeleteModalOpen}
+        onOpenChange={(open) => {
+          if (!isDeleting) {
+            setIsDeleteModalOpen(open);
+            if (!open) setDeletingExpense(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Expense</DialogTitle>
@@ -626,11 +779,23 @@ export default function ExpensesPage() {
             <Button
               variant="outline"
               onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeleting}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

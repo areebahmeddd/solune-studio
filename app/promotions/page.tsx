@@ -37,9 +37,11 @@ import {
   Download,
   Filter,
   MessageCircle,
+  Paperclip,
   Search,
   TrendingUp,
   Users,
+  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -65,6 +67,7 @@ export default function PromotionsPage() {
   );
   const [isBulkSend, setIsBulkSend] = useState(false);
   const [customMessage, setCustomMessage] = useState("");
+  const [attachments, setAttachments] = useState<File[]>([]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -167,9 +170,27 @@ export default function PromotionsPage() {
   };
 
   const confirmSendMessage = async () => {
-    if (!customMessage) {
-      toast.error("Please enter a message");
+    if (!customMessage && attachments.length === 0) {
+      toast.error("Please enter a message or attach a file");
       return;
+    }
+
+    let mediaUrl: string | undefined;
+    let mediaType: "image" | "video" | undefined;
+
+    if (attachments.length > 0) {
+      const file = attachments[0];
+
+      if (file.type.startsWith("image/")) {
+        mediaType = "image";
+      } else if (file.type.startsWith("video/")) {
+        mediaType = "video";
+      } else {
+        toast.error("Only image and video files are supported");
+        return;
+      }
+
+      toast.info("File attachment feature requires cloud storage setup");
     }
 
     const recipients = isBulkSend
@@ -177,11 +198,23 @@ export default function PromotionsPage() {
           .map((phone) => {
             const client = clientsData.find((c) => c.phone === phone);
             return client
-              ? { phone: client.phone, message: customMessage }
+              ? {
+                  phone: client.phone,
+                  message: customMessage,
+                  mediaUrl,
+                  mediaType,
+                }
               : null;
           })
           .filter(Boolean)
-      : [{ phone: selectedClient.phone, message: customMessage }];
+      : [
+          {
+            phone: selectedClient.phone,
+            message: customMessage,
+            mediaUrl,
+            mediaType,
+          },
+        ];
 
     try {
       const loadingToast = toast.loading(
@@ -227,6 +260,7 @@ export default function PromotionsPage() {
       setSelectedClient(null);
       setIsBulkSend(false);
       setCustomMessage("");
+      setAttachments([]);
     } catch (error) {
       toast.error("Failed to send message. Please try again.");
     }
@@ -523,6 +557,75 @@ export default function PromotionsPage() {
                 onChange={(e) => setCustomMessage(e.target.value)}
                 className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Attachments</Label>
+              <div className="space-y-2">
+                {attachments.length > 0 ? (
+                  <div className="space-y-2">
+                    {attachments.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between rounded-md border border-input bg-muted/50 px-3 py-2"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Paperclip className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">
+                              {file.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {(file.size / 1024).toFixed(1)} KB
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setAttachments(
+                              attachments.filter((_, i) => i !== index),
+                            );
+                          }}
+                          className="h-8 w-8 p-0 flex-shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="relative">
+                  <input
+                    type="file"
+                    id="file-upload"
+                    className="hidden"
+                    accept="image/*,video/*"
+                    onChange={(e) => {
+                      const files = e.target.files;
+                      if (files && files.length > 0) {
+                        setAttachments([files[0]]);
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      document.getElementById("file-upload")?.click()
+                    }
+                    className="w-full"
+                    disabled={attachments.length > 0}
+                  >
+                    <Paperclip className="h-4 w-4 mr-2" />
+                    {attachments.length > 0 ? "File attached" : "Attach file"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Supported: Images and videos (Max 1 file)
+                </p>
+              </div>
             </div>
           </div>
           <DialogFooter>
