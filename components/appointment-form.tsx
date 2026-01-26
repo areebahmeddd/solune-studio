@@ -28,7 +28,12 @@ import { useAppointments } from "@/hooks/use-appointments";
 import { useServiceGroups } from "@/hooks/use-service-groups";
 import { useServices } from "@/hooks/use-services";
 import { useStylists } from "@/hooks/use-stylists";
-import { cn } from "@/lib/utils";
+import {
+  calculateDiscountableAmount,
+  calculateFinalAmount,
+  cn,
+  hasNonDiscountableService,
+} from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2, Pencil, Plus, X } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -280,35 +285,21 @@ export function AppointmentForm({
     }
   };
 
-  const NON_DISCOUNTABLE_GROUPS = ["nails", "threading"];
-
-  const hasNonDiscountableService = formData.services.some((service: any) => {
-    if (!service.groupId) return false;
-    const group = serviceGroups.find((g) => g.id === service.groupId);
-    return (
-      group && NON_DISCOUNTABLE_GROUPS.includes(group.name.toLowerCase().trim())
-    );
-  });
-
-  const discountableAmount = formData.services.reduce(
-    (sum: number, service: any) => {
-      if (!service.groupId) return sum + service.price;
-      const group = serviceGroups.find((g) => g.id === service.groupId);
-      if (
-        group &&
-        NON_DISCOUNTABLE_GROUPS.includes(group.name.toLowerCase().trim())
-      ) {
-        return sum;
-      }
-      return sum + service.price;
-    },
-    0,
+  const discountableAmount = calculateDiscountableAmount(
+    formData.services,
+    serviceGroups,
   );
 
   const nonDiscountableAmount = formData.amount - discountableAmount;
 
   const discountAmount = (discountableAmount * formData.discount) / 100;
-  const finalAmount = formData.amount - discountAmount;
+
+  const finalAmount = calculateFinalAmount(
+    formData.services,
+    formData.amount,
+    formData.discount,
+    serviceGroups,
+  );
 
   const isFormValid = useMemo(() => {
     return (
@@ -675,7 +666,10 @@ export function AppointmentForm({
             <div className="space-y-2">
               <Label htmlFor="discount" className="text-sm">
                 Discount (%)
-                {hasNonDiscountableService && (
+                {hasNonDiscountableService(
+                  formData.services,
+                  serviceGroups,
+                ) && (
                   <span className="text-xs text-muted-foreground ml-1">
                     (Not applied to Nails/Threading)
                   </span>
@@ -706,23 +700,24 @@ export function AppointmentForm({
 
           <Card className="bg-muted/50 border-dashed">
             <CardContent className="pt-6">
-              {hasNonDiscountableService && formData.discount > 0 && (
-                <div className="space-y-2 mb-4 text-sm">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Discountable services</span>
-                    <span>₹{discountableAmount.toFixed(2)}</span>
+              {hasNonDiscountableService(formData.services, serviceGroups) &&
+                formData.discount > 0 && (
+                  <div className="space-y-2 mb-4 text-sm">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Discountable services</span>
+                      <span>₹{discountableAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Non-discountable (Nails/Threading)</span>
+                      <span>₹{nonDiscountableAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Discount ({formData.discount}%)</span>
+                      <span>-₹{discountAmount.toFixed(2)}</span>
+                    </div>
+                    <Separator className="my-2" />
                   </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Non-discountable (Nails/Threading)</span>
-                    <span>₹{nonDiscountableAmount.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Discount ({formData.discount}%)</span>
-                    <span>-₹{discountAmount.toFixed(2)}</span>
-                  </div>
-                  <Separator className="my-2" />
-                </div>
-              )}
+                )}
               <div className="flex items-center justify-between">
                 <span className="text-lg font-semibold">Final Amount</span>
                 <span className="text-2xl font-bold">

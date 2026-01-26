@@ -26,7 +26,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAppointments } from "@/hooks/use-appointments";
-import { cn } from "@/lib/utils";
+import { useServiceGroups } from "@/hooks/use-service-groups";
+import { calculateFinalAmount, cn } from "@/lib/utils";
 import { endOfMonth, format, startOfMonth, subDays, subMonths } from "date-fns";
 import { CalendarIcon, Edit, Filter, Search, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -55,6 +56,7 @@ export function AppointmentsList({
   onFilteredDataChange,
 }: AppointmentsListProps = {}) {
   const { appointments } = useAppointments();
+  const { serviceGroups } = useServiceGroups();
   const [search, setSearch] = useState("");
   const [localDateFilter, setLocalDateFilter] = useState<
     "all" | "today" | "7days" | "thisMonth" | "lastMonth"
@@ -274,9 +276,12 @@ export function AppointmentsList({
               </TableRow>
             ) : (
               filteredAppointments.map((appointment, index) => {
-                const discountAmount =
-                  (appointment.amount * appointment.discount) / 100;
-                const finalAmount = appointment.amount - discountAmount;
+                const finalAmount = calculateFinalAmount(
+                  appointment.services || [],
+                  appointment.amount,
+                  appointment.discount,
+                  serviceGroups,
+                );
 
                 return (
                   <TableRow key={appointment.id}>
