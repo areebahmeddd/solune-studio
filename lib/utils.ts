@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const NON_DISCOUNTABLE_GROUPS = ["nails", "threading"];
+const NON_DISCOUNTABLE_GROUPS = ["nails", "threading", "packages (combos)", "packages", "combos"];
 
 export function hasNonDiscountableService(
   services: any[],

@@ -671,7 +671,7 @@ export function AppointmentForm({
                   serviceGroups,
                 ) && (
                   <span className="text-xs text-muted-foreground ml-1">
-                    (Not applied to Nails/Threading)
+                    (Not applied to Nails/Threading/Packages)
                   </span>
                 )}
               </Label>
@@ -708,7 +708,7 @@ export function AppointmentForm({
                       <span>₹{discountableAmount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Non-discountable (Nails/Threading)</span>
+                      <span>Non-discountable (Nails/Threading/Packages)</span>
                       <span>₹{nonDiscountableAmount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
